@@ -91,14 +91,3 @@ elif t_target <= t_env:
 # ---------------------------------------------------------
 if is_valid:
     time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
-
-    if "simulating" not in st.session_state:
-        st.session_state.simulating = False
-    if "current_time" not in st.session_state:
-        st.session_state.current_time = 0.0
-
-    if start_btn:
-        st.session_state.simulating = True
-        st.session_state.current_time = 0.0
-
-    if st.session_state.
