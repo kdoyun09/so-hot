@@ -69,86 +69,10 @@ start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 # ---------------------------------------------------------
 # 4. 종합 열전달 계수(k) 계산 및 입력 예외 처리
 # ---------------------------------------------------------
-# 종합 k = 단열재 k * 내부계수 * 외부계수
 k_total = (
     INSULATION_MATERIALS[insul_mat]["k_mod"]
     * INNER_MATERIALS[inner_mat]["k_mod"]
     * OUTER_MATERIALS[outer_mat]["k_mod"]
 )
 
-is_valid = True
-if t_init <= t_env:
-    st.error("❌ [오류] 음료의 초기 온도가 외부 온도보다 높아야 시뮬레이션이 가능합니다.")
-    is_valid = False
-elif t_target >= t_init:
-    st.error("❌ [오류] 목표 온도는 초기 온도보다 낮게 설정해야 합니다.")
-    is_valid = False
-elif t_target <= t_env:
-    st.error("❌ [오류] 목표 온도가 외부 온도보다 낮으면 식어서 도달할 수 없습니다.")
-    is_valid = False
-
-# ---------------------------------------------------------
-# 5. 실시간 연속 (그라데이션) 온도 감쇠 로직
-# ---------------------------------------------------------
-if is_valid:
-    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
-
-    if "simulating" not in st.session_state:
-        st.session_state.simulating = False
-    if "current_time" not in st.session_state:
-        st.session_state.current_time = 0.0
-
-    if start_btn:
-        st.session_state.simulating = True
-        st.session_state.current_time = 0.0
-
-    # 샤라락 끊김 없이 60프레임으로 부드럽게 감소하는 타이머 연출
-    if st.session_state.simulating:
-        if st.session_state.current_time < time_to_target:
-            st.session_state.current_time += time_to_target / 60.0  # 60단계 연속 업데이트
-            time.sleep(0.05)  # 부드러운 애니메이션 프레임 속도
-            st.rerun()
-        else:
-            st.session_state.current_time = time_to_target
-            st.session_state.simulating = False
-
-    curr_t = st.session_state.current_time
-    # 뉴턴의 냉각 법칙 연속 연산
-    curr_temp = t_env + (t_init - t_env) * math.exp(-k_total * curr_t)
-
-    # 3D 배경 설정
-    if t_env >= 28:
-        bg_theme = "summer"
-    elif t_env <= 10:
-        bg_theme = "winter"
-    else:
-        bg_theme = "normal"
-
-    # 연속 온도가 내려감에 따라 RGB 아우라 색상 변화 (스무스한 표현)
-    if curr_temp >= 65:
-        aura_color = "0xff2222" # 뜨거움 (Red)
-    elif 50 <= curr_temp < 65:
-        aura_color = "0x22ff66" # 골든타임 (Green)
-    else:
-        aura_color = "0x2299ff" # 차가움 (Blue)
-
-    # ---------------------------------------------------------
-    # 6. 메인 레이아웃 및 3D 반단면 그래픽
-    # ---------------------------------------------------------
-    col1, col2 = st.columns([1.3, 1])
-
-    with col1:
-        st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
-        st.caption(
-            f"선택한 조합: **{inner_mat}** + **{insul_mat}** + **{outer_mat}**"
-        )
-
-        inner_color_hex = INNER_MATERIALS[inner_mat]["color"]
-
-        three_js_code = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ margin: 0; overflow: hidden; background-color: #111; }}
-                #canvas-container {{ width: 100vw; height:
+is
