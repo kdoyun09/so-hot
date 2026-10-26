@@ -96,8 +96,8 @@ if is_valid:
     # 자동 온도 감쇠 진행 (서서히 감소하는 연출)
     if st.session_state.simulating:
         if st.session_state.current_time < time_to_target:
-            st.session_state.current_time += time_to_target / 25.0  # 25단계 진행
-            time.sleep(0.12)  # 자연스러운 실시간 인터벌
+            st.session_state.current_time += time_to_target / 25.0
+            time.sleep(0.12)
             st.rerun()
         else:
             st.session_state.current_time = time_to_target
@@ -114,7 +114,7 @@ if is_valid:
     else:
         bg_theme = "normal"
 
-    # 아우라 색상 산출 (3D 뷰어)
+    # 아우라 색상 산출
     if curr_temp >= 65:
         aura_color = "0xff2222"
     elif 50 <= curr_temp < 65:
@@ -133,9 +133,10 @@ if is_valid:
             "실제 텀블러 구조(뚜껑, 스파우트 입구, 손잡이, 내부 단면)와 온도별 아우라를 360도 회전하며 관찰하세요."
         )
 
-        has_handle = "손잡이" in shape_style
+        has_handle = "true" if "손잡이" in shape_style else "false"
 
-        three_js_code = f"""
+        # 안전한 파이썬 변수 치환 방식 (.format) 적용으로 SyntaxError 완전 방지
+        three_js_code = """
         <!DOCTYPE html>
         <html>
         <head>
@@ -152,7 +153,6 @@ if is_valid:
                 const container = document.getElementById('canvas-container');
                 const scene = new THREE.Scene();
 
-                // 1. 외부 온도 기반 3D 배경
                 let bgColor = 0x181818;
                 let gridColor = 0x444444;
                 if ("{bg_theme}" === "summer") {{
@@ -174,6 +174,165 @@ if is_valid:
                 const controls = new THREE.OrbitControls(camera, renderer.domElement);
                 controls.enableDamping = true;
 
-                // 조명
                 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-                scene.add(ambient
+                scene.add(ambientLight);
+                const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+                dirLight1.position.set(5, 10, 7);
+                scene.add(dirLight1);
+
+                const grid = new THREE.GridHelper(10, 10, gridColor, 0x222222);
+                grid.position.y = -1.9;
+                scene.add(grid);
+
+                const tumblerGroup = new THREE.Group();
+
+                let bodyColor = 0xc0c8d0;
+                let roughnessVal = 0.25;
+                let metalnessVal = 0.85;
+
+                if ("{material_name}".indexOf("유리") !== -1) {{
+                    bodyColor = 0x88ccee;
+                    roughnessVal = 0.05;
+                    metalnessVal = 0.1;
+                }} else if ("{material_name}".indexOf("플라스틱") !== -1) {{
+                    bodyColor = 0xeb4d4b;
+                    roughnessVal = 0.5;
+                    metalnessVal = 0.05;
+                }}
+
+                // 불투명 반쪽 바디
+                const solidBodyGeo = new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, 0, Math.PI);
+                const solidBodyMat = new THREE.MeshStandardMaterial({{ 
+                    color: bodyColor, 
+                    roughness: roughnessVal, 
+                    metalness: metalnessVal, 
+                    side: THREE.DoubleSide 
+                }});
+                const solidBody = new THREE.Mesh(solidBodyGeo, solidBodyMat);
+                tumblerGroup.add(solidBody);
+
+                // 투명 단면 바디
+                const glassBodyGeo = new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, Math.PI, Math.PI);
+                const glassBodyMat = new THREE.MeshPhysicalMaterial({{ 
+                    color: bodyColor, 
+                    transparent: true, 
+                    opacity: 0.22, 
+                    roughness: 0.1, 
+                    side: THREE.DoubleSide 
+                }});
+                const glassBody = new THREE.Mesh(glassBodyGeo, glassBodyMat);
+                tumblerGroup.add(glassBody);
+
+                // 뚜껑
+                const lidGroup = new THREE.Group();
+                const lidBaseGeo = new THREE.CylinderGeometry(0.92, 0.92, 0.35, 32);
+                const lidMat = new THREE.MeshStandardMaterial({{ color: 0x222222, roughness: 0.7 }});
+                const lidBase = new THREE.Mesh(lidBaseGeo, lidMat);
+                lidGroup.add(lidBase);
+
+                const spoutGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.2, 16);
+                const spoutMat = new THREE.MeshStandardMaterial({{ color: 0x111111, roughness: 0.5 }});
+                const spout = new THREE.Mesh(spoutGeo, spoutMat);
+                spout.position.set(0.35, 0.2, 0);
+                lidGroup.add(spout);
+
+                lidGroup.position.y = 1.65;
+                tumblerGroup.add(lidGroup);
+
+                // 손잡이
+                if ({has_handle}) {{
+                    const handleGeo = new THREE.TorusGeometry(0.8, 0.08, 12, 24, Math.PI);
+                    const handleMat = new THREE.MeshStandardMaterial({{ color: 0x222222, roughness: 0.8 }});
+                    const handle = new THREE.Mesh(handleGeo, handleMat);
+                    handle.rotation.z = -Math.PI / 2;
+                    handle.position.set(-0.9, 0, 0);
+                    tumblerGroup.add(handle);
+                }}
+
+                // 내부 음료
+                const liquidGeo = new THREE.CylinderGeometry(0.78, 0.65, 2.5, 32);
+                const liquidMat = new THREE.MeshStandardMaterial({{ color: 0x5d3a1a, roughness: 0.2 }});
+                const liquid = new THREE.Mesh(liquidGeo, liquidMat);
+                liquid.position.y = -0.15;
+                tumblerGroup.add(liquid);
+
+                // 3D Glow 아우라
+                const auraGeo = new THREE.CylinderGeometry(1.1, 0.95, 3.2, 32);
+                const auraMat = new THREE.MeshBasicMaterial({{ 
+                    color: {aura_color}, 
+                    transparent: true, 
+                    opacity: 0.38, 
+                    side: THREE.BackSide 
+                }});
+                const auraMesh = new THREE.Mesh(auraGeo, auraMat);
+                tumblerGroup.add(auraMesh);
+
+                scene.add(tumblerGroup);
+
+                function animate() {{
+                    requestAnimationFrame(animate);
+                    tumblerGroup.rotation.y += 0.003;
+                    controls.update();
+                    renderer.render(scene, camera);
+                }}
+                animate();
+            </script>
+        </body>
+        </html>
+        """.format(
+            bg_theme=bg_theme,
+            material_name=material_name,
+            has_handle=has_handle,
+            aura_color=aura_color,
+        )
+
+        components.html(three_js_code, height=480)
+
+    with col2:
+        st.subheader("🌡️ 실시간 온도 추적 패널")
+
+        progress_ratio = min(curr_t / time_to_target, 1.0)
+        st.progress(progress_ratio)
+
+        st.markdown("### ⏱️ 예상 소요 시간 정보")
+        if progress_ratio < 0.85 and st.session_state.simulating:
+            st.info("⏳ **실시간 열전달률 분석 및 예측 시간 계산 중...**")
+        else:
+            st.success(
+                f"🎯 **최적 온도까지 총 예상 시간:** 약 **{time_to_target:.1f} 분**"
+            )
+
+        st.metric(
+            label="🌡️ 현재 음료 실시간 온도",
+            value=f"{curr_temp:.1f} °C",
+            delta=f"{curr_temp - t_init:.1f} °C (식는 중)",
+        )
+
+        st.markdown("---")
+
+        if curr_t >= time_to_target and not st.session_state.simulating:
+            st.subheader("📋 최종 분석 및 섭취 가이드")
+
+            if 50 <= curr_temp <= 65:
+                st.success(
+                    f"☕ **[최적의 마심 골든타임 도달!]**\n\n"
+                    f"현재 음료 온도는 **{curr_temp:.1f}°C**입니다.\n"
+                    f"화상 위험 없이 가장 안전하고 깊은 풍미로 드실 수 있습니다."
+                )
+            elif curr_temp > 65:
+                st.warning(
+                    f"🔥 **[아직 다소 뜨거운 상태]**\n\n"
+                    f"현재 음료 온도는 **{curr_temp:.1f}°C**입니다.\n"
+                    f"입을 데일 수 있으니 조금만 더 식혀 드세요."
+                )
+            else:
+                st.info(
+                    f"❄️ **[많이 식은 상태]**\n\n"
+                    f"현재 음료 온도는 **{curr_temp:.1f}°C**입니다.\n"
+                    f"음료가 미지근해졌으니 따뜻한 음료를 원하시면 재가열이 필요합니다."
+                )
+        else:
+            st.warning(
+                f"⏳ **음료 온도가 서서히 감소하고 있습니다...**\n\n"
+                f"3D 아우라가 초록색으로 바뀔 때까지 기다려 주세요."
+            )
