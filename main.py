@@ -75,4 +75,30 @@ k_total = (
     * OUTER_MATERIALS[outer_mat]["k_mod"]
 )
 
-is
+is_valid = True
+if t_init <= t_env:
+    st.error("❌ [오류] 음료의 초기 온도가 외부 온도보다 높아야 시뮬레이션이 가능합니다.")
+    is_valid = False
+elif t_target >= t_init:
+    st.error("❌ [오류] 목표 온도는 초기 온도보다 낮게 설정해야 합니다.")
+    is_valid = False
+elif t_target <= t_env:
+    st.error("❌ [오류] 목표 온도가 외부 온도보다 낮으면 식어서 도달할 수 없습니다.")
+    is_valid = False
+
+# ---------------------------------------------------------
+# 5. 실시간 연속 (그라데이션) 온도 감쇠 로직
+# ---------------------------------------------------------
+if is_valid:
+    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
+
+    if "simulating" not in st.session_state:
+        st.session_state.simulating = False
+    if "current_time" not in st.session_state:
+        st.session_state.current_time = 0.0
+
+    if start_btn:
+        st.session_state.simulating = True
+        st.session_state.current_time = 0.0
+
+    if st.session_state.
