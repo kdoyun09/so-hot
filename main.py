@@ -8,37 +8,49 @@ import streamlit.components.v1 as components
 # 1. 페이지 기본 설정
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="3D 텀블러 보온 시뮬레이터", page_icon="🥤", layout="wide"
+    page_title="3D 커스텀 텀블러 보온 시뮬레이터", page_icon="🥤", layout="wide"
 )
 
-st.title("🥤 3D 텀블러 보온·보냉 시뮬레이터")
+st.title("🥤 3D 커스텀 텀블러 보온·보냉 시뮬레이터")
 st.caption(
-    "화학공학의 열전달 원리와 뉴턴의 냉각 법칙을 기반으로 3D 공간에서 음료 식힘 과정을 실시간으로 추적합니다."
+    "내부·단열재·외부 소재를 세세하게 직접 조합하여 열전달률을 계산하고, 실시간 연속 온도가 떨어지는 과정을 3D로 관찰하세요."
 )
 
-# 재질별 열손실 계수 (k)
-K_VALUES = {
-    "진공 이중 구조 스텐 텀블러": 0.012,
-    "이중 유리 텀블러": 0.025,
-    "일반 플라스틱 텀블러": 0.045,
+# ---------------------------------------------------------
+# 2. 세부 소재별 열전달 저항 요소 (k값 계산용)
+# ---------------------------------------------------------
+INNER_MATERIALS = {
+    "SUS304/316L 위생 스테인리스": {"k_mod": 1.0, "color": "0xc0c8d0"},
+    "세라믹 코팅 (Ceramic Layer)": {"k_mod": 0.85, "color": "0xf0efe9"},
+    "내열 강화 유리 (Borosilicate)": {"k_mod": 1.3, "color": "0x88ccee"},
+}
+
+INSULATION_MATERIALS = {
+    "진공 단열층 (High-Vacuum Layer)": {"k_mod": 0.010, "desc": "최상급 보온성"},
+    "에어로겔 (Aerogel Insulation)": {"k_mod": 0.008, "desc": "우주공학 신소재"},
+    "고밀도 우레탄 폼 (Urethane Foam)": {"k_mod": 0.035, "desc": "일반 보온성"},
+}
+
+OUTER_MATERIALS = {
+    "파우더 코팅 메탈 (Powder Coated Metal)": {"k_mod": 1.0, "rough": 0.3},
+    "친환경 실리콘 커버 (Silicone Grip)": {"k_mod": 0.9, "rough": 0.7},
+    "BPA-Free 강화 플라스틱 (PP/Tritan)": {"k_mod": 1.1, "rough": 0.5},
 }
 
 # ---------------------------------------------------------
-# 2. 사이드바 제어판 (조건 설정 & 추천 가이드)
+# 3. 사이드바 세부 설정
 # ---------------------------------------------------------
-st.sidebar.header("🛠️ 텀블러 & 환경 설정")
+st.sidebar.header("🛠️ 텀블러 커스터마이징")
 
-material_name = st.sidebar.selectbox("1. 텀블러 재질", list(K_VALUES.keys()))
-shape_style = st.sidebar.selectbox(
-    "2. 텀블러 디자인 스타일",
-    ["시그니처 손잡이형 텀블러", "슬림 캐리 텀블러"],
-)
+inner_mat = st.sidebar.selectbox("1. 내부 재질 (음료 접촉)", list(INNER_MATERIALS.keys()))
+insul_mat = st.sidebar.selectbox("2. 단열 구조 (중간 단열재)", list(INSULATION_MATERIALS.keys()))
+outer_mat = st.sidebar.selectbox("3. 외부 재질 (손잡이/외벽)", list(OUTER_MATERIALS.keys()))
 
 st.sidebar.markdown("---")
-t_env = st.sidebar.slider("3. 현재 텀블러가 있는 곳의 외부 온도 (°C)", -10, 40, 20)
-t_init = st.sidebar.number_input("4. 음료 초기 온도 (°C)", value=90.0, step=1.0)
+st.sidebar.header("🌡️ 환경 & 온도 설정")
+t_env = st.sidebar.slider("현재 텀블러가 있는 곳의 외부 온도 (°C)", -10, 40, 20)
+t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=90.0, step=1.0)
 
-# 목표 온도 안내 추천 알고리즘 및 가이드
 rec_temp = 58.0
 if t_env < 5:
     rec_temp = 62.0
@@ -47,43 +59,40 @@ elif t_env > 28:
 
 st.sidebar.info(
     f"💡 **목표 온도 추천 가이드:**\n\n"
-    f"현재 외부 온도({t_env}°C) 기준, 사람이 화상을 입지 않고 가장 최적의 풍미를 느낄 수 있는 온도는 **{rec_temp}°C 내외**입니다. (일반 권장: 50°C~65°C)"
+    f"현재 외부 온도({t_env}°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **{rec_temp}°C 내외**입니다."
 )
 
-t_target = st.sidebar.number_input(
-    "5. 목표 섭취 온도 (°C)", value=rec_temp, step=1.0
-)
+t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp, step=1.0)
 
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # ---------------------------------------------------------
-# 3. 예외 처리 (입력 검증)
+# 4. 종합 열전달 계수(k) 계산 및 입력 예외 처리
 # ---------------------------------------------------------
+# 종합 k = 단열재 k * 내부계수 * 외부계수
+k_total = (
+    INSULATION_MATERIALS[insul_mat]["k_mod"]
+    * INNER_MATERIALS[inner_mat]["k_mod"]
+    * OUTER_MATERIALS[outer_mat]["k_mod"]
+)
+
 is_valid = True
 if t_init <= t_env:
-    st.error(
-        "❌ [오류] 음료의 초기 온도가 외부 온도보다 높아야 보온 시뮬레이션이 가능합니다."
-    )
+    st.error("❌ [오류] 음료의 초기 온도가 외부 온도보다 높아야 시뮬레이션이 가능합니다.")
     is_valid = False
 elif t_target >= t_init:
-    st.error(
-        "❌ [오류] 마시기 좋은 목표 온도는 초기 음료 온도보다 낮아야 합니다."
-    )
+    st.error("❌ [오류] 목표 온도는 초기 온도보다 낮게 설정해야 합니다.")
     is_valid = False
 elif t_target <= t_env:
-    st.error(
-        "❌ [오류] 목표 온도가 외부 온도보다 낮으면 음료가 식어서 도달할 수 없습니다."
-    )
+    st.error("❌ [오류] 목표 온도가 외부 온도보다 낮으면 식어서 도달할 수 없습니다.")
     is_valid = False
 
 # ---------------------------------------------------------
-# 4. 시뮬레이션 상태 관리 및 실시간 애니메이션
+# 5. 실시간 연속 (그라데이션) 온도 감쇠 로직
 # ---------------------------------------------------------
 if is_valid:
-    k = K_VALUES[material_name]
-    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k
+    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
 
-    # 세션 상태 초기화
     if "simulating" not in st.session_state:
         st.session_state.simulating = False
     if "current_time" not in st.session_state:
@@ -93,20 +102,21 @@ if is_valid:
         st.session_state.simulating = True
         st.session_state.current_time = 0.0
 
-    # 자동 온도 감쇠 진행 (서서히 감소하는 연출)
+    # 샤라락 끊김 없이 60프레임으로 부드럽게 감소하는 타이머 연출
     if st.session_state.simulating:
         if st.session_state.current_time < time_to_target:
-            st.session_state.current_time += time_to_target / 25.0
-            time.sleep(0.12)
+            st.session_state.current_time += time_to_target / 60.0  # 60단계 연속 업데이트
+            time.sleep(0.05)  # 부드러운 애니메이션 프레임 속도
             st.rerun()
         else:
             st.session_state.current_time = time_to_target
             st.session_state.simulating = False
 
     curr_t = st.session_state.current_time
-    curr_temp = t_env + (t_init - t_env) * math.exp(-k * curr_t)
+    # 뉴턴의 냉각 법칙 연속 연산
+    curr_temp = t_env + (t_init - t_env) * math.exp(-k_total * curr_t)
 
-    # 3D 배경 테마 결정 (외부 온도 기준)
+    # 3D 배경 설정
     if t_env >= 28:
         bg_theme = "summer"
     elif t_env <= 10:
@@ -114,225 +124,31 @@ if is_valid:
     else:
         bg_theme = "normal"
 
-    # 아우라 색상 산출
+    # 연속 온도가 내려감에 따라 RGB 아우라 색상 변화 (스무스한 표현)
     if curr_temp >= 65:
-        aura_color = "0xff2222"
+        aura_color = "0xff2222" # 뜨거움 (Red)
     elif 50 <= curr_temp < 65:
-        aura_color = "0x22ff66"
+        aura_color = "0x22ff66" # 골든타임 (Green)
     else:
-        aura_color = "0x2299ff"
+        aura_color = "0x2299ff" # 차가움 (Blue)
 
     # ---------------------------------------------------------
-    # 5. 메인 레이아웃 및 디테일 3D 뷰어 출력
+    # 6. 메인 레이아웃 및 3D 반단면 그래픽
     # ---------------------------------------------------------
     col1, col2 = st.columns([1.3, 1])
 
     with col1:
-        st.subheader("🎮 실물 디자인 3D 반단면 텀블러")
+        st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
         st.caption(
-            "실제 텀블러 구조(뚜껑, 스파우트 입구, 손잡이, 내부 단면)와 온도별 아우라를 360도 회전하며 관찰하세요."
+            f"선택한 조합: **{inner_mat}** + **{insul_mat}** + **{outer_mat}**"
         )
 
-        has_handle = "true" if "손잡이" in shape_style else "false"
+        inner_color_hex = INNER_MATERIALS[inner_mat]["color"]
 
-        # 안전한 파이썬 변수 치환 방식 (.format) 적용으로 SyntaxError 완전 방지
         three_js_code = """
         <!DOCTYPE html>
         <html>
         <head>
             <style>
                 body {{ margin: 0; overflow: hidden; background-color: #111; }}
-                #canvas-container {{ width: 100vw; height: 470px; }}
-            </style>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-        </head>
-        <body>
-            <div id="canvas-container"></div>
-            <script>
-                const container = document.getElementById('canvas-container');
-                const scene = new THREE.Scene();
-
-                let bgColor = 0x181818;
-                let gridColor = 0x444444;
-                if ("{bg_theme}" === "summer") {{
-                    bgColor = 0x2b1c0c;
-                    gridColor = 0x885522;
-                }} else if ("{bg_theme}" === "winter") {{
-                    bgColor = 0x0a1622;
-                    gridColor = 0x3377aa;
-                }}
-                scene.background = new THREE.Color(bgColor);
-
-                const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-                camera.position.set(2.8, 2.2, 5.8);
-
-                const renderer = new THREE.WebGLRenderer({{ antialias: true }});
-                renderer.setSize(container.clientWidth, container.clientHeight);
-                container.appendChild(renderer.domElement);
-
-                const controls = new THREE.OrbitControls(camera, renderer.domElement);
-                controls.enableDamping = true;
-
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-                scene.add(ambientLight);
-                const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
-                dirLight1.position.set(5, 10, 7);
-                scene.add(dirLight1);
-
-                const grid = new THREE.GridHelper(10, 10, gridColor, 0x222222);
-                grid.position.y = -1.9;
-                scene.add(grid);
-
-                const tumblerGroup = new THREE.Group();
-
-                let bodyColor = 0xc0c8d0;
-                let roughnessVal = 0.25;
-                let metalnessVal = 0.85;
-
-                if ("{material_name}".indexOf("유리") !== -1) {{
-                    bodyColor = 0x88ccee;
-                    roughnessVal = 0.05;
-                    metalnessVal = 0.1;
-                }} else if ("{material_name}".indexOf("플라스틱") !== -1) {{
-                    bodyColor = 0xeb4d4b;
-                    roughnessVal = 0.5;
-                    metalnessVal = 0.05;
-                }}
-
-                // 불투명 반쪽 바디
-                const solidBodyGeo = new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, 0, Math.PI);
-                const solidBodyMat = new THREE.MeshStandardMaterial({{ 
-                    color: bodyColor, 
-                    roughness: roughnessVal, 
-                    metalness: metalnessVal, 
-                    side: THREE.DoubleSide 
-                }});
-                const solidBody = new THREE.Mesh(solidBodyGeo, solidBodyMat);
-                tumblerGroup.add(solidBody);
-
-                // 투명 단면 바디
-                const glassBodyGeo = new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, Math.PI, Math.PI);
-                const glassBodyMat = new THREE.MeshPhysicalMaterial({{ 
-                    color: bodyColor, 
-                    transparent: true, 
-                    opacity: 0.22, 
-                    roughness: 0.1, 
-                    side: THREE.DoubleSide 
-                }});
-                const glassBody = new THREE.Mesh(glassBodyGeo, glassBodyMat);
-                tumblerGroup.add(glassBody);
-
-                // 뚜껑
-                const lidGroup = new THREE.Group();
-                const lidBaseGeo = new THREE.CylinderGeometry(0.92, 0.92, 0.35, 32);
-                const lidMat = new THREE.MeshStandardMaterial({{ color: 0x222222, roughness: 0.7 }});
-                const lidBase = new THREE.Mesh(lidBaseGeo, lidMat);
-                lidGroup.add(lidBase);
-
-                const spoutGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.2, 16);
-                const spoutMat = new THREE.MeshStandardMaterial({{ color: 0x111111, roughness: 0.5 }});
-                const spout = new THREE.Mesh(spoutGeo, spoutMat);
-                spout.position.set(0.35, 0.2, 0);
-                lidGroup.add(spout);
-
-                lidGroup.position.y = 1.65;
-                tumblerGroup.add(lidGroup);
-
-                // 손잡이
-                if ({has_handle}) {{
-                    const handleGeo = new THREE.TorusGeometry(0.8, 0.08, 12, 24, Math.PI);
-                    const handleMat = new THREE.MeshStandardMaterial({{ color: 0x222222, roughness: 0.8 }});
-                    const handle = new THREE.Mesh(handleGeo, handleMat);
-                    handle.rotation.z = -Math.PI / 2;
-                    handle.position.set(-0.9, 0, 0);
-                    tumblerGroup.add(handle);
-                }}
-
-                // 내부 음료
-                const liquidGeo = new THREE.CylinderGeometry(0.78, 0.65, 2.5, 32);
-                const liquidMat = new THREE.MeshStandardMaterial({{ color: 0x5d3a1a, roughness: 0.2 }});
-                const liquid = new THREE.Mesh(liquidGeo, liquidMat);
-                liquid.position.y = -0.15;
-                tumblerGroup.add(liquid);
-
-                // 3D Glow 아우라
-                const auraGeo = new THREE.CylinderGeometry(1.1, 0.95, 3.2, 32);
-                const auraMat = new THREE.MeshBasicMaterial({{ 
-                    color: {aura_color}, 
-                    transparent: true, 
-                    opacity: 0.38, 
-                    side: THREE.BackSide 
-                }});
-                const auraMesh = new THREE.Mesh(auraGeo, auraMat);
-                tumblerGroup.add(auraMesh);
-
-                scene.add(tumblerGroup);
-
-                function animate() {{
-                    requestAnimationFrame(animate);
-                    tumblerGroup.rotation.y += 0.003;
-                    controls.update();
-                    renderer.render(scene, camera);
-                }}
-                animate();
-            </script>
-        </body>
-        </html>
-        """.format(
-            bg_theme=bg_theme,
-            material_name=material_name,
-            has_handle=has_handle,
-            aura_color=aura_color,
-        )
-
-        components.html(three_js_code, height=480)
-
-    with col2:
-        st.subheader("🌡️ 실시간 온도 추적 패널")
-
-        progress_ratio = min(curr_t / time_to_target, 1.0)
-        st.progress(progress_ratio)
-
-        st.markdown("### ⏱️ 예상 소요 시간 정보")
-        if progress_ratio < 0.85 and st.session_state.simulating:
-            st.info("⏳ **실시간 열전달률 분석 및 예측 시간 계산 중...**")
-        else:
-            st.success(
-                f"🎯 **최적 온도까지 총 예상 시간:** 약 **{time_to_target:.1f} 분**"
-            )
-
-        st.metric(
-            label="🌡️ 현재 음료 실시간 온도",
-            value=f"{curr_temp:.1f} °C",
-            delta=f"{curr_temp - t_init:.1f} °C (식는 중)",
-        )
-
-        st.markdown("---")
-
-        if curr_t >= time_to_target and not st.session_state.simulating:
-            st.subheader("📋 최종 분석 및 섭취 가이드")
-
-            if 50 <= curr_temp <= 65:
-                st.success(
-                    f"☕ **[최적의 마심 골든타임 도달!]**\n\n"
-                    f"현재 음료 온도는 **{curr_temp:.1f}°C**입니다.\n"
-                    f"화상 위험 없이 가장 안전하고 깊은 풍미로 드실 수 있습니다."
-                )
-            elif curr_temp > 65:
-                st.warning(
-                    f"🔥 **[아직 다소 뜨거운 상태]**\n\n"
-                    f"현재 음료 온도는 **{curr_temp:.1f}°C**입니다.\n"
-                    f"입을 데일 수 있으니 조금만 더 식혀 드세요."
-                )
-            else:
-                st.info(
-                    f"❄️ **[많이 식은 상태]**\n\n"
-                    f"현재 음료 온도는 **{curr_temp:.1f}°C**입니다.\n"
-                    f"음료가 미지근해졌으니 따뜻한 음료를 원하시면 재가열이 필요합니다."
-                )
-        else:
-            st.warning(
-                f"⏳ **음료 온도가 서서히 감소하고 있습니다...**\n\n"
-                f"3D 아우라가 초록색으로 바뀔 때까지 기다려 주세요."
-            )
+                #canvas-container {{ width: 100vw; height:
