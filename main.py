@@ -5,7 +5,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. 페이지 기본 설정
+# 1. 페이지 기본 설정 및 상태 초기화
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="3D 커스텀 텀블러 보온 시뮬레이터", page_icon="🥤", layout="wide"
@@ -15,6 +15,11 @@ st.title("🥤 3D 커스텀 텀블러 보온·보냉 시뮬레이터")
 st.caption(
     "내부·단열재·외부 소재를 세세하게 직접 조합하여 열전달률을 계산하고, 실시간 연속 온도가 떨어지는 과정을 3D로 관찰하세요."
 )
+
+if "simulating" not in st.session_state:
+    st.session_state["simulating"] = False
+if "current_time" not in st.session_state:
+    st.session_state["current_time"] = 0.0
 
 # ---------------------------------------------------------
 # 2. 세부 소재별 열전달 저항 요소 (k값 계산용)
@@ -67,7 +72,7 @@ t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp,
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # ---------------------------------------------------------
-# 4. 종합 열전달 계수(k) 계산 및 입력 예외 처리
+# 4. 연산 및 예외 처리
 # ---------------------------------------------------------
 k_total = (
     INSULATION_MATERIALS[insul_mat]["k_mod"]
@@ -86,8 +91,65 @@ elif t_target <= t_env:
     st.error("❌ [오류] 목표 온도가 외부 온도보다 낮으면 식어서 도달할 수 없습니다.")
     is_valid = False
 
-# ---------------------------------------------------------
-# 5. 실시간 연속 (그라데이션) 온도 감쇠 로직
-# ---------------------------------------------------------
 if is_valid:
     time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
+
+    if start_btn:
+        st.session_state["simulating"] = True
+        st.session_state["current_time"] = 0.0
+
+    # 시뮬레이션 타이머 진행
+    if st.session_state["simulating"]:
+        if st.session_state["current_time"] < time_to_target:
+            st.session_state["current_time"] += time_to_target / 60.0
+            time.sleep(0.05)
+            st.rerun()
+        else:
+            st.session_state["current_time"] = time_to_target
+            st.session_state["simulating"] = False
+
+    curr_t = st.session_state["current_time"]
+    curr_temp = t_env + (t_init - t_env) * math.exp(-k_total * curr_t)
+
+    if t_env >= 28:
+        bg_theme = "summer"
+    elif t_env <= 10:
+        bg_theme = "winter"
+    else:
+        bg_theme = "normal"
+
+    if curr_temp >= 65:
+        aura_color = "0xff2222"
+    elif 50 <= curr_temp < 65:
+        aura_color = "0x22ff66"
+    else:
+        aura_color = "0x2299ff"
+
+    # ---------------------------------------------------------
+    # 5. 메인 뷰어 렌더링
+    # ---------------------------------------------------------
+    col1, col2 = st.columns([1.3, 1])
+
+    with col1:
+        st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
+        st.caption(
+            f"선택한 조합: **{inner_mat}** + **{insul_mat}** + **{outer_mat}**"
+        )
+
+        inner_color_hex = INNER_MATERIALS[inner_mat]["color"]
+
+        raw_html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { margin: 0; overflow: hidden; background-color: #111; }
+                #canvas-container { width: 100vw; height: 480px; }
+            </style>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+        </head>
+        <body>
+            <div id="canvas-container"></div>
+            <script>
+                const container = document.getElementById('canvas
