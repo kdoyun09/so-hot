@@ -1,5 +1,4 @@
 import math
-import os
 import json
 import streamlit as st
 import streamlit.components.v1 as components
@@ -123,21 +122,10 @@ else:
 
 bg_theme = "summer" if t_env >= 28 else ("winter" if t_env <= 10 else "normal")
 inner_color_hex = INNER_MATERIALS[inner_mat_key]["color"]
-should_start = True if (start_btn and is_valid) else False
-
-config_data = {
-    "tInit": float(t_init),
-    "tEnv": float(t_env),
-    "tTarget": float(t_target),
-    "kTotal": float(k_total),
-    "timeToTarget": float(time_to_target),
-    "bgTheme": bg_theme,
-    "innerColorHex": inner_color_hex,
-    "shouldStart": should_start,
-}
+should_start = "true" if (start_btn and is_valid) else "false"
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 index.html 연동
+# 5. 메인 UI 및 통합 3D WebGL 엔진
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
@@ -150,37 +138,122 @@ with col1:
     caption_text = "선택한 조합: **{}** + **{}** + **{}**".format(in_name, ins_name, out_name)
     st.caption(caption_text)
 
-    html_path = os.path.join(os.path.dirname(__file__), "index.html")
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
-        
-        json_str = json.dumps(config_data)
-        data_tag = '<div id="sim-data" style="display:none;">{}</div>'.format(json_str)
-        
-        components.html(html_content + data_tag, height=490)
-    else:
-        st.error("❌ index.html 파일을 찾을 수 없습니다. main.py와 동일한 위치에 생성해 주세요.")
+    # 3D HTML / Three.js 완전 자체 포함 스트링
+    html_template = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }}
+        #canvas-container {{ width: 100vw; height: 480px; position: relative; }}
+        #temp-display {{
+            position: absolute; top: 15px; left: 15px; color: #fff;
+            background: rgba(0, 0, 0, 0.75); padding: 10px 16px; border-radius: 8px;
+            font-size: 18px; font-weight: bold; border: 1px solid #444; z-index: 10;
+        }}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="canvas-container">
+        <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">{t_init_disp:.1f}</span> °C</div>
+    </div>
+    <script>
+        window.onload = function() {{
+            const container = document.getElementById("canvas-container");
+            const tempValElem = document.getElementById("current-temp-val");
 
-with col2:
-    st.subheader("📊 소재 계산 및 보온 대시보드")
+            const width = container.clientWidth || window.innerWidth || 600;
+            const height = 480;
 
-    st.markdown("### 🧪 선택한 소재 종합 특성 리포트")
-    st.markdown(inner_desc)
-    st.markdown(insul_desc)
-    st.markdown(outer_desc)
+            const scene = new THREE.Scene();
+            
+            let bgColor = 0x181818;
+            let gridColor = 0x444444;
+            if ("{bg_theme}" === "summer") {{
+                bgColor = 0x2b1c0c;
+                gridColor = 0x885522;
+            }} else if ("{bg_theme}" === "winter") {{
+                bgColor = 0x0a1622;
+                gridColor = 0x3377aa;
+            }}
+            scene.background = new THREE.Color(bgColor);
 
-    st.markdown("---")
-    st.markdown("### 🧪 계산된 총 열전달 계수 (k)")
-    st.code("k_total = {:.5f}".format(k_total))
+            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(0, 0.8, 7.5);
+            camera.lookAt(0, 0, 0);
 
-    st.markdown("---")
-    st.markdown("### ⏱️ 예상 보온 시간")
-    st.success("🎯 **목표 온도({:.1f}°C) 도달 시간:** 약 **{:.1f} 분**".format(t_target, time_to_target))
+            const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            container.appendChild(renderer.domElement);
 
-    st.markdown("---")
-    st.info(
-        "💡 **시뮬레이션 안내:**\n\n"
-        "좌측 사이드바에서 소재를 선택하고 **[🚀 시뮬레이션 시작]**을 누르면, "
-        "3D 텀블러 좌측 상단의 실시간 온도와 아우라 색상이 **90.0°C → 목표 온도**로 연속적으로 떨어집니다."
-    )
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            const grid = new THREE.GridHelper(10, 10, gridColor, 0x333333);
+            grid.position.y = -2.2;
+            scene.add(grid);
+
+            const tumblerGroup = new THREE.Group();
+
+            // 1. 불투명 외벽 (반쪽)
+            const solidMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, 0, Math.PI),
+                new THREE.MeshStandardMaterial({{ color: 0x333333, roughness: 0.4, side: THREE.DoubleSide }})
+            );
+            tumblerGroup.add(solidMesh);
+
+            // 2. 투명 외벽 (반쪽)
+            const glassMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, Math.PI, Math.PI),
+                new THREE.MeshStandardMaterial({{ color: 0x888888, transparent: true, opacity: 0.3, side: THREE.DoubleSide }})
+            );
+            tumblerGroup.add(glassMesh);
+
+            // 3. 내벽 레이어
+            const innerMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.82, 0.68, 2.8, 32, 1, false, 0, Math.PI),
+                new THREE.MeshStandardMaterial({{ color: {inner_color_hex}, metalness: 0.8, roughness: 0.2, side: THREE.DoubleSide }})
+            );
+            tumblerGroup.add(innerMesh);
+
+            // 4. 뚜껑 & 스파우트
+            const lidBase = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.92, 0.92, 0.35, 32),
+                new THREE.MeshStandardMaterial({{ color: 0x222222, roughness: 0.7 }})
+            );
+            lidBase.position.y = 1.65;
+            tumblerGroup.add(lidBase);
+
+            const spout = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.25, 0.25, 0.2, 16),
+                new THREE.MeshStandardMaterial({{ color: 0x111111, roughness: 0.5 }})
+            );
+            spout.position.set(0.35, 1.85, 0);
+            tumblerGroup.add(spout);
+
+            // 5. 손잡이
+            const handle = new THREE.Mesh(
+                new THREE.TorusGeometry(0.8, 0.08, 12, 24, Math.PI),
+                new THREE.MeshStandardMaterial({{ color: 0x222222, roughness: 0.8 }})
+            );
+            handle.rotation.z = -Math.PI / 2;
+            handle.position.set(-0.9, 0, 0);
+            tumblerGroup.add(handle);
+
+            // 6. 음료
+            const liquid = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.78, 0.64, 2.5, 32),
+                new THREE.MeshStandardMaterial({{ color: 0x5d3a1a, roughness: 0.2 }})
+            );
+            liquid.position.y = -0.15;
+            tumblerGroup.add(liquid);
+
+            // 7. 실시간 Glow 아우라
+            const auraMat = new THREE.MeshBasicMaterial({{ color: 0xff2222, transparent: true, opacity: 0.35, side: THREE.BackSide }});
+            const aura = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.1, 0.95, 3.2,
