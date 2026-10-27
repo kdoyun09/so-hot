@@ -17,33 +17,72 @@ st.caption(
 )
 
 # ---------------------------------------------------------
-# 2. 소재별 열전달 데이터 정의
+# 2. 소재별 상세 정보 및 친절한 설명 데이터 정의
 # ---------------------------------------------------------
 INNER_MATERIALS = {
-    "SUS304/316L 위생 스테인리스": {"k_mod": 1.0, "color": "0xc0c8d0"},
-    "세라믹 코팅 (Ceramic Layer)": {"k_mod": 0.85, "color": "0xf0efe9"},
-    "내열 강화 유리 (Borosilicate)": {"k_mod": 1.3, "color": "0x88ccee"},
+    "SUS304/316L 위생 스테인리스 (위생성 & 내구성 우수)": {
+        "k_mod": 1.0,
+        "color": "0xc0c8d0",
+        "desc": "🛡️ **특징:** 부식과 녹에 강한 의료·식품용 위생 소재입니다. 내구성이 뛰어나며 변형이 적지만, 착색이나 냄새 배임이 약간 있을 수 있습니다."
+    },
+    "세라믹 코팅 (Ceramic Layer - 착색·냄새 방지)": {
+        "k_mod": 0.85,
+        "color": "0xf0efe9",
+        "desc": "☕ **특징:** 도자기 코팅을 입혀 커피나 음료의 착색 및 냄새 배임을 완벽히 차단합니다. 금속 맛이 나지 않아 음료 본연의 맛을 유지합니다."
+    },
+    "내열 강화 유리 (Borosilicate - 투명성 & 열충격 강함)": {
+        "k_mod": 1.3,
+        "color": "0x88ccee",
+        "desc": "💎 **특징:** 열충격에 강한 붕규산 유리 소재입니다. 내부 음료 상태를 투명하게 확인할 수 있으나, 스테인리스 대비 열손실이 약간 더 빠릅니다."
+    },
 }
 
 INSULATION_MATERIALS = {
-    "진공 단열층 (High-Vacuum Layer)": {"k_mod": 0.010, "desc": "최상급 보온성"},
-    "에어로겔 (Aerogel Insulation)": {"k_mod": 0.008, "desc": "우주공학 신소재"},
-    "고밀도 우레탄 폼 (Urethane Foam)": {"k_mod": 0.035, "desc": "일반 보온성"},
+    "진공 단열층 (High-Vacuum Layer - 최상급 보온)": {
+        "k_mod": 0.010,
+        "desc": "🔥 **특징:** 내벽과 외벽 사이를 고진공 상태로 만들어 전도·대류에 의한 열손실을 극단적으로 차단하는 표준 최상급 보온 구조입니다."
+    },
+    "에어로겔 (Aerogel Insulation - 우주공학 신소재)": {
+        "k_mod": 0.008,
+        "desc": "🚀 **특징:** '고체 공기'라 불리는 우주공학 신소재 단열재입니다. 두께 대비 열차단 성능이 전 세계 최고 수준으로 매우 탁월합니다."
+    },
+    "고밀도 우레탄 폼 (Urethane Foam - 실속형 보온)": {
+        "k_mod": 0.035,
+        "desc": "📦 **특징:** 일반 보온 도시락 및 저가형 보온병에 쓰이는 고밀도 폼 충전재입니다. 진공층에 비해 가벼우나 보온 지속 시간은 비교적 짧습니다."
+    },
 }
 
 OUTER_MATERIALS = {
-    "파우더 코팅 메탈 (Powder Coated Metal)": {"k_mod": 1.0, "rough": 0.3},
-    "친환경 실리콘 커버 (Silicone Grip)": {"k_mod": 0.9, "rough": 0.7},
-    "BPA-Free 강화 플라스틱 (PP/Tritan)": {"k_mod": 1.1, "rough": 0.5},
+    "파우더 코팅 메탈 (Powder Coated Metal - 강한 내구성)": {
+        "k_mod": 1.0,
+        "rough": 0.3,
+        "desc": "🎨 **특징:** 분체 도장 기법으로 외부 스크래치와 오염에 강합니다. 고급스러운 매트 감촉과 뛰어난 그립감을 제공합니다."
+    },
+    "친환경 실리콘 커버 (Silicone Grip - 미끄럼 방지)": {
+        "k_mod": 0.9,
+        "rough": 0.7,
+        "desc": "🖐️ **특징:** 손에 착 감기는 미끄럼 방지 그립감을 주며, 낙하 시 충격을 완화해 줍니다. 열전달을 한 번 더 막아주는 효과가 있습니다."
+    },
+    "BPA-Free 강화 플라스틱 (PP/Tritan - 가벼움 & 스크래치 강함)": {
+        "k_mod": 1.1,
+        "rough": 0.5,
+        "desc": "🌱 **특징:** 환경호르몬이 나오지 않는 안전한 친환경 플라스틱 소재입니다. 무게가 매우 가벼워 휴대성이 극대화됩니다."
+    },
 }
 
 # ---------------------------------------------------------
-# 3. 사이드바 UI 설정
+# 3. 사이드바 UI 설정 (선택창 + 실시간 상세 설명 카드)
 # ---------------------------------------------------------
 st.sidebar.header("🛠️ 텀블러 커스터마이징")
-inner_mat = st.sidebar.selectbox("1. 내부 재질 (음료 접촉)", list(INNER_MATERIALS.keys()))
-insul_mat = st.sidebar.selectbox("2. 단열 구조 (중간 단열재)", list(INSULATION_MATERIALS.keys()))
-outer_mat = st.sidebar.selectbox("3. 외부 재질 (손잡이/외벽)", list(OUTER_MATERIALS.keys()))
+
+inner_mat_key = st.sidebar.selectbox("1. 내부 재질 (음료 접촉)", list(INNER_MATERIALS.keys()))
+st.sidebar.caption(INNER_MATERIALS[inner_mat_key]["desc"])
+
+insul_mat_key = st.sidebar.selectbox("2. 단열 구조 (중간 단열재)", list(INSULATION_MATERIALS.keys()))
+st.sidebar.caption(INSULATION_MATERIALS[insul_mat_key]["desc"])
+
+outer_mat_key = st.sidebar.selectbox("3. 외부 재질 (손잡이/외벽)", list(OUTER_MATERIALS.keys()))
+st.sidebar.caption(OUTER_MATERIALS[outer_mat_key]["desc"])
 
 st.sidebar.markdown("---")
 st.sidebar.header("🌡️ 환경 & 온도 설정")
@@ -64,12 +103,12 @@ t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp,
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # ---------------------------------------------------------
-# 4. 연산 및 JSON 데이터 설정
+# 4. 연산 및 JSON 설정 데이터 생성
 # ---------------------------------------------------------
 k_total = (
-    INSULATION_MATERIALS[insul_mat]["k_mod"]
-    * INNER_MATERIALS[inner_mat]["k_mod"]
-    * OUTER_MATERIALS[outer_mat]["k_mod"]
+    INSULATION_MATERIALS[insul_mat_key]["k_mod"]
+    * INNER_MATERIALS[inner_mat_key]["k_mod"]
+    * OUTER_MATERIALS[outer_mat_key]["k_mod"]
 )
 
 if t_init > t_env and t_target < t_init and t_target > t_env:
@@ -81,7 +120,7 @@ else:
     st.error("❌ 입력한 온도가 올바르지 않습니다. (초기온도 > 목표온도 > 외부온도 규칙 필요)")
 
 bg_theme = "summer" if t_env >= 28 else ("winter" if t_env <= 10 else "normal")
-inner_color_hex = INNER_MATERIALS[inner_mat]["color"]
+inner_color_hex = INNER_MATERIALS[inner_mat_key]["color"]
 should_start = True if (start_btn and is_valid) else False
 
 config_data = {
@@ -96,50 +135,21 @@ config_data = {
 }
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 index.html 연동 (안전 실행 호출)
+# 5. 메인 UI 및 index.html 연동
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
 with col1:
     st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
-    st.caption(f"선택한 조합: **{inner_mat}** + **{insul_mat}** + **{outer_mat}**")
+    st.caption(f"선택한 조합: **{inner_mat_key.split(' (')[0]}** + **{insul_mat_key.split(' (')[0]}** + **{outer_mat_key.split(' (')[0]}**")
 
     html_path = os.path.join(os.path.dirname(__file__), "index.html")
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        # DOM 로드가 완결된 후 안전하게 JS 실행되도록 바인딩
         script_call = f"""
         <script>
             function runSim() {{
                 if (window.initSimulator) {{
                     window.initSimulator({json.dumps(config_data)});
-                }} else {{
-                    setTimeout(runSim, 50);
-                }}
-            }}
-            runSim();
-        </script>
-        """
-        full_html = html_content + script_call
-        components.html(full_html, height=490)
-    else:
-        st.error("❌ index.html 파일을 찾을 수 없습니다. main.py와 동일한 위치에 생성해 주세요.")
-
-with col2:
-    st.subheader("📊 소재 계산 및 보온 대시보드")
-
-    st.markdown("### 🧪 계산된 총 열전달 계수 ($k$)")
-    st.code(f"k_total = {k_total:.5f}")
-
-    st.markdown("---")
-    st.markdown("### ⏱️ 예상 보온 시간")
-    st.success(f"🎯 **목표 온도({t_target}°C) 도달 시간:** 약 **{time_to_target:.1f} 분**")
-
-    st.markdown("---")
-    st.info(
-        "💡 **시뮬레이션 안내:**\n\n"
-        "좌측 사이드바에서 소재를 선택하고 **[🚀 시뮬레이션 시작]**을 누르면, "
-        "3D 텀블러 좌측 상단의 실시간 온도와 아우라 색상이 **90.0°C → 목표 온도**로 연속적으로 떨어집니다."
-    )
