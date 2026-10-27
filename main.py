@@ -71,7 +71,7 @@ OUTER_MATERIALS = {
 }
 
 # ---------------------------------------------------------
-# 3. 사이드바 UI 설정 (선택창 + 실시간 상세 설명 카드)
+# 3. 사이드바 UI 설정
 # ---------------------------------------------------------
 st.sidebar.header("🛠️ 텀블러 커스터마이징")
 
@@ -135,37 +135,21 @@ config_data = {
 }
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 index.html 연동 (문자열 파싱 에러 방지)
+# 5. 메인 UI 및 index.html 연동
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
 with col1:
     st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
-    st.caption("선택한 조합: **" + inner_mat_key.split(' (')[0] + "** + **" + insul_mat_key.split(' (')[0] + "** + **" + outer_mat_key.split(' (')[0] + "**")
+    
+    in_name = inner_mat_key.split(' (')[0]
+    ins_name = insul_mat_key.split(' (')[0]
+    out_name = outer_mat_key.split(' (')[0]
+    st.caption("선택한 조합: **" + in_name + "** + **" + ins_name + "** + **" + out_name + "**")
 
     html_path = os.path.join(os.path.dirname(__file__), "index.html")
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        # f-string 대신 안전한 %s 포맷팅 사용
-        script_template = """
-        <script>
-            function runSim() {
-                if (window.initSimulator) {
-                    window.initSimulator(%s);
-                } else {
-                    setTimeout(runSim, 50);
-                }
-            }
-            runSim();
-        </script>
-        """
-        script_call = script_template % json.dumps(config_data)
-        full_html = html_content + script_call
-        components.html(full_html, height=490)
-    else:
-        st.error("❌ index.html 파일을 찾을 수 없습니다. main.py와 동일한 위치에 생성해 주세요.")
-
-with col2:
-    st.subheader("📊 소재 계산 및 보
+        script_template = "<script>function runSim(){if(window.initSimulator){window.initSimulator(%s
