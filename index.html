@@ -55,14 +55,14 @@
 
             const tumblerGroup = new THREE.Group();
 
-            // 외벽 불투명
+            // 외벽 불투명 (반쪽)
             const solidMesh = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, 0, Math.PI),
                 new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4, side: THREE.DoubleSide })
             );
             tumblerGroup.add(solidMesh);
 
-            // 외벽 반단면 투명관
+            // 외벽 반단면 투명관 (반쪽)
             const glassMesh = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, Math.PI, Math.PI),
                 new THREE.MeshStandardMaterial({ color: 0x888888, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
@@ -137,41 +137,7 @@
             });
             window.addEventListener("mouseup", function() { isDragging = false; });
 
-            // 연속 그라데이션 온도 감쇠 연출
+            // 연속 그라데이션 온도 감쇠 연출 (JS 실행)
             let currentTemp = config.tInit;
             let progress = 0;
-            const totalSteps = 120;
-
-            function updateTemperature() {
-                if (config.shouldStart && progress <= totalSteps) {
-                    let progressRatio = progress / totalSteps;
-                    let timeVal = progressRatio * config.timeToTarget;
-                    currentTemp = config.tEnv + (config.tInit - config.tEnv) * Math.exp(-config.kTotal * timeVal);
-                    
-                    tempValElem.innerText = currentTemp.toFixed(1);
-
-                    if (currentTemp >= 65) {
-                        auraMat.color.setHex(0xff2222);
-                    } else if (currentTemp >= 50 && currentTemp < 65) {
-                        auraMat.color.setHex(0x22ff66);
-                    } else {
-                        auraMat.color.setHex(0x2299ff);
-                    }
-
-                    progress += 1;
-                }
-            }
-
-            function animate() {
-                requestAnimationFrame(animate);
-                if (!isDragging) {
-                    tumblerGroup.rotation.y += 0.005;
-                }
-                updateTemperature();
-                renderer.render(scene, camera);
-            }
-            animate();
-        }
-    </script>
-</body>
-</html>
+            const totalSteps = 120
