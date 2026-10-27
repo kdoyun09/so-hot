@@ -98,7 +98,6 @@ if t_env < 5:
 elif t_env > 28:
     rec_temp = 52.0
 
-# format() 메서드를 이용해 안전하게 동적 문자열 생성
 info_msg = "💡 **목표 온도 추천 가이드:**\n\n현재 외부 온도({}°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **{}°C 내외**입니다.".format(t_env, rec_temp)
 st.sidebar.info(info_msg)
 
@@ -147,4 +146,41 @@ with col1:
     
     in_name = inner_mat_key.split(' (')[0]
     ins_name = insul_mat_key.split(' (')[0]
-    out_name = outer_mat_key.
+    out_name = outer_mat_key.split(' (')[0]
+    caption_text = "선택한 조합: **{}** + **{}** + **{}**".format(in_name, ins_name, out_name)
+    st.caption(caption_text)
+
+    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        
+        json_str = json.dumps(config_data)
+        data_tag = '<div id="sim-data" style="display:none;">{}</div>'.format(json_str)
+        
+        components.html(html_content + data_tag, height=490)
+    else:
+        st.error("❌ index.html 파일을 찾을 수 없습니다. main.py와 동일한 위치에 생성해 주세요.")
+
+with col2:
+    st.subheader("📊 소재 계산 및 보온 대시보드")
+
+    st.markdown("### 🧪 선택한 소재 종합 특성 리포트")
+    st.markdown(inner_desc)
+    st.markdown(insul_desc)
+    st.markdown(outer_desc)
+
+    st.markdown("---")
+    st.markdown("### 🧪 계산된 총 열전달 계수 (k)")
+    st.code("k_total = {:.5f}".format(k_total))
+
+    st.markdown("---")
+    st.markdown("### ⏱️ 예상 보온 시간")
+    st.success("🎯 **목표 온도({:.1f}°C) 도달 시간:** 약 **{:.1f} 분**".format(t_target, time_to_target))
+
+    st.markdown("---")
+    st.info(
+        "💡 **시뮬레이션 안내:**\n\n"
+        "좌측 사이드바에서 소재를 선택하고 **[🚀 시뮬레이션 시작]**을 누르면, "
+        "3D 텀블러 좌측 상단의 실시간 온도와 아우라 색상이 **90.0°C → 목표 온도**로 연속적으로 떨어집니다."
+    )
