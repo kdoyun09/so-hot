@@ -18,7 +18,11 @@
         <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">--</span> °C</div>
     </div>
     <script>
-        function startApp() {
+        let isRendered = false;
+
+        function run3DSimulator() {
+            if (isRendered) return;
+
             const dataElem = document.getElementById("sim-data");
             let config = { tInit: 90.0, tEnv: 20.0, tTarget: 58.0, kTotal: 0.01, timeToTarget: 60.0, bgTheme: "normal", innerColorHex: "0xc0c8d0", shouldStart: false };
             
@@ -31,13 +35,16 @@
             const container = document.getElementById("canvas-container");
             const tempValElem = document.getElementById("current-temp-val");
             
+            if (!container || typeof THREE === "undefined") return;
+
+            isRendered = true;
+
             if (config && config.tInit !== undefined) {
                 tempValElem.innerText = Number(config.tInit).toFixed(1);
             }
 
-            while (container.getElementsByTagName('canvas').length > 0) {
-                container.removeChild(container.getElementsByTagName('canvas')[0]);
-            }
+            container.innerHTML = '<div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">' + Number(config.tInit).toFixed(1) + '</span> °C</div>';
+            const newTempValElem = document.getElementById("current-temp-val");
 
             const width = container.clientWidth || window.innerWidth || 600;
             const height = 480;
@@ -83,5 +90,4 @@
             tumblerGroup.add(solidMesh);
 
             const glassMesh = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, Math.PI, Math.PI),
-                new THREE.MeshStandardMaterial({ color: 0x888888, transparent: true, opacity: 0.3, side: THREE.
+                new THREE.CylinderGeometry(0.9, 0.75, 3.0, 3
