@@ -103,7 +103,7 @@ t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp,
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # ---------------------------------------------------------
-# 4. 연산 및 JSON 설정 데이터 생성
+# 4. 연산 및 설정 파라미터 계산
 # ---------------------------------------------------------
 k_total = (
     INSULATION_MATERIALS[insul_mat_key]["k_mod"]
@@ -135,7 +135,7 @@ config_data = {
 }
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 index.html 연동
+# 5. 메인 UI 및 index.html 연동 (파이썬 따옴표 처리 완전 제거)
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
@@ -152,4 +152,33 @@ with col1:
         with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        script_template = "<script>function runSim(){if(window.initSimulator){window.initSimulator(%s
+        # HTML 하단에 안전한 JSON 데이터 창만 매핑
+        json_str = json.dumps(config_data)
+        data_div = '<div id="sim-data" style="display:none;">' + json_str + '</div>'
+        
+        components.html(html_content + data_div, height=490)
+    else:
+        st.error("❌ index.html 파일을 찾을 수 없습니다. main.py와 동일한 위치에 생성해 주세요.")
+
+with col2:
+    st.subheader("📊 소재 계산 및 보온 대시보드")
+
+    st.markdown("### 🧪 선택한 소재 종합 특성 리포트")
+    st.markdown(INNER_MATERIALS[inner_mat_key]["desc"])
+    st.markdown(INSULATION_MATERIALS[insul_mat_key]["desc"])
+    st.markdown(OUTER_MATERIALS[outer_mat_key]["desc"])
+
+    st.markdown("---")
+    st.markdown("### 🧪 계산된 총 열전달 계수 (k)")
+    st.code("k_total = " + f"{k_total:.5f}")
+
+    st.markdown("---")
+    st.markdown("### ⏱️ 예상 보온 시간")
+    st.success("🎯 **목표 온도(" + str(t_target) + "°C) 도달 시간:** 약 **" + f"{time_to_target:.1f}" + " 분**")
+
+    st.markdown("---")
+    st.info(
+        "💡 **시뮬레이션 안내:**\n\n"
+        "좌측 사이드바에서 소재를 선택하고 **[🚀 시뮬레이션 시작]**을 누르면, "
+        "3D 텀블러 좌측 상단의 실시간 온도와 아우라 색상이 **90.0°C → 목표 온도**로 연속적으로 떨어집니다."
+    )
