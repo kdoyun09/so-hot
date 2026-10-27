@@ -71,7 +71,7 @@ OUTER_MATERIALS = {
 }
 
 # ---------------------------------------------------------
-# 3. 사이드바 UI 설정 (구문 안전 가독화)
+# 3. 사이드바 UI 설정
 # ---------------------------------------------------------
 st.sidebar.header("🛠️ 텀블러 커스터마이징")
 
@@ -98,5 +98,53 @@ if t_env < 5:
 elif t_env > 28:
     rec_temp = 52.0
 
-st.sidebar.info(
-    "💡 **목표 온도 추천 가이드:**\n\n현재 외부 온도(" + str(t_env) + "°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **
+# format() 메서드를 이용해 안전하게 동적 문자열 생성
+info_msg = "💡 **목표 온도 추천 가이드:**\n\n현재 외부 온도({}°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **{}°C 내외**입니다.".format(t_env, rec_temp)
+st.sidebar.info(info_msg)
+
+t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp, step=1.0)
+start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
+
+# ---------------------------------------------------------
+# 4. 연산 및 물리 계산
+# ---------------------------------------------------------
+k_total = (
+    INSULATION_MATERIALS[insul_mat_key]["k_mod"]
+    * INNER_MATERIALS[inner_mat_key]["k_mod"]
+    * OUTER_MATERIALS[outer_mat_key]["k_mod"]
+)
+
+if t_init > t_env and t_target < t_init and t_target > t_env:
+    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
+    is_valid = True
+else:
+    time_to_target = 30.0
+    is_valid = False
+    st.error("❌ 입력한 온도가 올바르지 않습니다. (초기온도 > 목표온도 > 외부온도 규칙 필요)")
+
+bg_theme = "summer" if t_env >= 28 else ("winter" if t_env <= 10 else "normal")
+inner_color_hex = INNER_MATERIALS[inner_mat_key]["color"]
+should_start = True if (start_btn and is_valid) else False
+
+config_data = {
+    "tInit": float(t_init),
+    "tEnv": float(t_env),
+    "tTarget": float(t_target),
+    "kTotal": float(k_total),
+    "timeToTarget": float(time_to_target),
+    "bgTheme": bg_theme,
+    "innerColorHex": inner_color_hex,
+    "shouldStart": should_start,
+}
+
+# ---------------------------------------------------------
+# 5. 메인 UI 및 index.html 연동
+# ---------------------------------------------------------
+col1, col2 = st.columns([1.3, 1])
+
+with col1:
+    st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
+    
+    in_name = inner_mat_key.split(' (')[0]
+    ins_name = insul_mat_key.split(' (')[0]
+    out_name = outer_mat_key.
