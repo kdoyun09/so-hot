@@ -18,7 +18,20 @@
         <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">--</span> °C</div>
     </div>
     <script>
-        window.initSimulator = function(config) {
+        window.addEventListener("DOMContentLoaded", function() {
+            setTimeout(initSimulator, 50);
+        });
+
+        function initSimulator() {
+            const dataElem = document.getElementById("sim-data");
+            let config = { tInit: 90.0, tEnv: 20.0, tTarget: 58.0, kTotal: 0.01, timeToTarget: 60.0, bgTheme: "normal", innerColorHex: "0xc0c8d0", shouldStart: false };
+            
+            if (dataElem) {
+                try {
+                    config = JSON.parse(dataElem.innerText);
+                } catch(e) {}
+            }
+
             const container = document.getElementById("canvas-container");
             const tempValElem = document.getElementById("current-temp-val");
             
@@ -26,7 +39,6 @@
                 tempValElem.innerText = Number(config.tInit).toFixed(1);
             }
 
-            // 기존 렌더러가 존재하면 중복 생성 방지 및 기존 캔버스 제거
             while (container.getElementsByTagName('canvas').length > 0) {
                 container.removeChild(container.getElementsByTagName('canvas')[0]);
             }
@@ -47,7 +59,6 @@
             }
             scene.background = new THREE.Color(bgColor);
 
-            // 카메라 위치 재조정 (텀블러 전체가 화면 중앙에 쏙 들어오도록 구도 조정)
             const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
             camera.position.set(0, 0.8, 7.5);
             camera.lookAt(0, 0, 0);
@@ -57,36 +68,30 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
             container.appendChild(renderer.domElement);
 
-            // 조명
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
             scene.add(ambientLight);
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
             dirLight.position.set(5, 10, 7);
             scene.add(dirLight);
 
-            // 바닥 격자
             const grid = new THREE.GridHelper(10, 10, gridColor, 0x333333);
             grid.position.y = -2.2;
             scene.add(grid);
 
-            // 텀블러 그룹 (중앙 피벗 배치)
             const tumblerGroup = new THREE.Group();
 
-            // 1. 불투명 외벽 (반쪽)
             const solidMesh = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, 0, Math.PI),
                 new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4, side: THREE.DoubleSide })
             );
             tumblerGroup.add(solidMesh);
 
-            // 2. 투명 외벽 (반쪽)
             const glassMesh = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, Math.PI, Math.PI),
                 new THREE.MeshStandardMaterial({ color: 0x888888, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
             );
             tumblerGroup.add(glassMesh);
 
-            // 3. 내벽 레이어 (색상 파싱)
             let parsedColor = 0xc0c8d0;
             if (config && config.innerColorHex) {
                 parsedColor = parseInt(config.innerColorHex.replace("0x", ""), 16) || 0xc0c8d0;
@@ -97,117 +102,9 @@
             );
             tumblerGroup.add(innerMesh);
 
-            // 4. 뚜껑 & 스파우트
             const lidBase = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.92, 0.92, 0.35, 32),
                 new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7 })
             );
             lidBase.position.y = 1.65;
-            tumblerGroup.add(lidBase);
-
-            const spout = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.25, 0.25, 0.2, 16),
-                new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 })
-            );
-            spout.position.set(0.35, 1.85, 0);
-            tumblerGroup.add(spout);
-
-            // 5. 손잡이 (오른쪽 정면 배치)
-            const handle = new THREE.Mesh(
-                new THREE.TorusGeometry(0.8, 0.08, 12, 24, Math.PI),
-                new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 })
-            );
-            handle.rotation.z = -Math.PI / 2;
-            handle.position.set(-0.9, 0, 0);
-            tumblerGroup.add(handle);
-
-            // 6. 내부 음료
-            const liquid = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.78, 0.64, 2.5, 32),
-                new THREE.MeshStandardMaterial({ color: 0x5d3a1a, roughness: 0.2 })
-            );
-            liquid.position.y = -0.15;
-            tumblerGroup.add(liquid);
-
-            // 7. 실시간 Glow 아우라
-            const auraMat = new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.35, side: THREE.BackSide });
-            const aura = new THREE.Mesh(
-                new THREE.CylinderGeometry(1.1, 0.95, 3.2, 32),
-                auraMat
-            );
-            tumblerGroup.add(aura);
-
-            // 그룹 전체의 Y축 중앙을 맞추기 위해 살짝 아래로 내림
-            tumblerGroup.position.y = -0.2;
-            scene.add(tumblerGroup);
-
-            // 마우스 회전 인터랙션
-            let isDragging = false;
-            let previousMousePosition = { x: 0, y: 0 };
-            const domElement = renderer.domElement;
-
-            domElement.addEventListener("mousedown", function(e) { 
-                isDragging = true; 
-                previousMousePosition = { x: e.offsetX, y: e.offsetY }; 
-            });
-            
-            domElement.addEventListener("mousemove", function(e) {
-                if (isDragging) {
-                    const deltaMove = {
-                        x: e.offsetX - previousMousePosition.x,
-                        y: e.offsetY - previousMousePosition.y
-                    };
-                    tumblerGroup.rotation.y += deltaMove.x * 0.01;
-                    tumblerGroup.rotation.x += deltaMove.y * 0.01;
-                }
-                previousMousePosition = { x: e.offsetX, y: e.offsetY };
-            });
-            
-            window.addEventListener("mouseup", function() { isDragging = false; });
-
-            // 창 크기 반응형 대응
-            window.addEventListener('resize', function() {
-                const newWidth = container.clientWidth || window.innerWidth || 600;
-                camera.aspect = newWidth / height;
-                camera.updateProjectionMatrix();
-                renderer.setSize(newWidth, height);
-            });
-
-            // 연속 실시간 온도 감쇠 연출
-            let currentTemp = config ? config.tInit : 90;
-            let progress = 0;
-            const totalSteps = 120;
-
-            function updateTemperature() {
-                if (config && config.shouldStart && progress <= totalSteps) {
-                    let progressRatio = progress / totalSteps;
-                    let timeVal = progressRatio * config.timeToTarget;
-                    currentTemp = config.tEnv + (config.tInit - config.tEnv) * Math.exp(-config.kTotal * timeVal);
-                    
-                    tempValElem.innerText = currentTemp.toFixed(1);
-
-                    if (currentTemp >= 65) {
-                        auraMat.color.setHex(0xff2222);
-                    } else if (currentTemp >= 50 && currentTemp < 65) {
-                        auraMat.color.setHex(0x22ff66);
-                    } else {
-                        auraMat.color.setHex(0x2299ff);
-                    }
-
-                    progress += 1;
-                }
-            }
-
-            function animate() {
-                requestAnimationFrame(animate);
-                if (!isDragging) {
-                    tumblerGroup.rotation.y += 0.005;
-                }
-                updateTemperature();
-                renderer.render(scene, camera);
-            }
-            animate();
-        };
-    </script>
-</body>
-</html>
+            tumblerGroup.add
