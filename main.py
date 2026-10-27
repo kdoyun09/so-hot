@@ -62,7 +62,7 @@ elif t_env > 28:
 
 st.sidebar.info(
     "💡 **목표 온도 추천 가이드:**\n\n"
-    f"현재 외부 온도({t_env}°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **{rec_temp}°C 내외**입니다."
+    "현재 외부 온도(" + str(t_env) + "°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **" + str(rec_temp) + "°C 내외**입니다."
 )
 
 t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp, step=1.0)
@@ -113,25 +113,31 @@ else:
 inner_color_hex = INNER_MATERIALS[inner_mat]["color"]
 
 # ---------------------------------------------------------
-# 5. 메인 UI 화면 렌더링
+# 5. 메인 UI 화면 렌더링 (안전한 문자열 리스트 방식)
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
 with col1:
     st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
-    st.caption(f"선택한 조합: **{inner_mat}** + **{insul_mat}** + **{outer_mat}**")
+    st.caption("선택한 조합: **" + inner_mat + "** + **" + insul_mat + "** + **" + outer_mat + "**")
 
-    # 파이썬 f-string 문법 오류를 절대 일으키지 않는 안전한 단일 HTML 코드
-    raw_html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body { margin: 0; padding: 0; overflow: hidden; background-color: #111; }
-            #canvas-container { width: 100%; height: 480px; }
-        </style>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    </head>
-    <body>
-        <div id="canvas-
+    # 3중 따옴표를 전혀 사용하지 않는 안전한 템플릿
+    html_lines = [
+        '<!DOCTYPE html>',
+        '<html>',
+        '<head>',
+        '    <meta charset="utf-8">',
+        '    <style>',
+        '        body { margin: 0; padding: 0; overflow: hidden; background-color: #111; }',
+        '        #canvas-container { width: 100%; height: 480px; }',
+        '    </style>',
+        '    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>',
+        '</head>',
+        '<body>',
+        '    <div id="canvas-container"></div>',
+        '    <script>',
+        '        window.onload = function() {',
+        '            const container = document.getElementById("canvas-container");',
+        '            const scene = new THREE.Scene();',
+        '            let bgColor = 0x181818;',
+        '            let gridColor =
