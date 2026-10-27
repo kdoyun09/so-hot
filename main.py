@@ -122,7 +122,7 @@ inner_color_hex = INNER_MATERIALS[inner_mat_key]["color"]
 should_start = "true" if (start_btn and is_valid) else "false"
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 통합 3D 렌더링 엔진
+# 5. 메인 UI 및 안전한 HTML 렌더링
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
@@ -134,23 +134,21 @@ with col1:
     out_name = outer_mat_key.split(' (')[0]
     st.caption("선택한 조합: **" + in_name + "** + **" + ins_name + "** + **" + out_name + "**")
 
-    html_code = f"""
-<!DOCTYPE html>
+    html_template = """<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <style>
-        body {{ margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }}
-        #canvas-container {{ width: 100vw; height: 480px; position: relative; }}
-        #temp-display {{
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }
+        #canvas-container { width: 100vw; height: 480px; position: relative; }
+        #temp-display {
             position: absolute; top: 15px; left: 15px; color: #fff;
             background: rgba(0, 0, 0, 0.75); padding: 10px 16px; border-radius: 8px;
             font-size: 18px; font-weight: bold; border: 1px solid #444; z-index: 10;
-        }}
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div id="canvas-container">
-        <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">{t_init:.1f}</span> °C</div>
-    </div>
+        <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">PARAM_T_INIT_DISP</span> °C</div>
