@@ -64,7 +64,7 @@ t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp,
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # ---------------------------------------------------------
-# 4. 연산 및 JSON 설정 데이터 생성
+# 4. 연산 및 JSON 데이터 설정
 # ---------------------------------------------------------
 k_total = (
     INSULATION_MATERIALS[insul_mat]["k_mod"]
@@ -96,7 +96,7 @@ config_data = {
 }
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 index.html 연동
+# 5. 메인 UI 및 index.html 연동 (안전 실행 호출)
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
@@ -109,7 +109,19 @@ with col1:
         with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        script_call = f"<script>initSimulator({json.dumps(config_data)});</script>"
+        # DOM 로드가 완결된 후 안전하게 JS 실행되도록 바인딩
+        script_call = f"""
+        <script>
+            function runSim() {{
+                if (window.initSimulator) {{
+                    window.initSimulator({json.dumps(config_data)});
+                }} else {{
+                    setTimeout(runSim, 50);
+                }}
+            }}
+            runSim();
+        </script>
+        """
         full_html = html_content + script_call
         components.html(full_html, height=490)
     else:
@@ -129,5 +141,5 @@ with col2:
     st.info(
         "💡 **시뮬레이션 안내:**\n\n"
         "좌측 사이드바에서 소재를 선택하고 **[🚀 시뮬레이션 시작]**을 누르면, "
-        "3D 텀블러 좌측 상단의 실시간 온도와 아우라 색상이 **100°C → 50°C**로 연속적으로 떨어집니다."
+        "3D 텀블러 좌측 상단의 실시간 온도와 아우라 색상이 **90.0°C → 목표 온도**로 연속적으로 떨어집니다."
     )
