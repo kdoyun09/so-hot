@@ -4,7 +4,7 @@ import json
 import streamlit as st
 import streamlit.components.v1 as components
 
-# 1. 페이지 설정
+# 1. 페이지 기본 설정
 st.set_page_config(page_title="3D 커스텀 텀블러 보온 시뮬레이터", page_icon="🥤", layout="wide")
 
 st.title("🥤 3D 커스텀 텀블러 보온·보냉 시뮬레이터")
@@ -29,7 +29,7 @@ OUTER_MATERIALS = {
     "BPA-Free 강화 플라스틱 (PP/Tritan - 가벼움 & 스크래치 강함)": {"k_mod": 1.1, "desc": "가볍고 유해물질이 없는 안전한 친환경 플라스틱입니다."}
 }
 
-# 3. 사이드바
+# 3. 사이드바 UI
 st.sidebar.header("🛠️ 텀블러 커스터마이징")
 inner_mat_key = st.sidebar.selectbox("1. 내부 재질", list(INNER_MATERIALS.keys()))
 inner_desc = INNER_MATERIALS[inner_mat_key]["desc"]
@@ -48,4 +48,78 @@ st.sidebar.header("🌡️ 환경 & 온도 설정")
 t_env = st.sidebar.slider("외부 온도 (°C)", -10, 40, 20)
 t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=90.0, step=1.0)
 
-rec_temp = 58.0 if 5 <= t_env <= 28 else (62.
+# 조건문을 명확한 if - elif - else로 구성하여 SyntaxError 완전 방지
+if t_env < 5:
+    rec_temp = 62.0
+elif t_env > 28:
+    rec_temp = 52.0
+else:
+    rec_temp = 58.0
+
+info_text = "💡 외부 온도(" + str(t_env) + "°C) 기준 추천 목표 온도는 **" + str(rec_temp) + "°C**입니다."
+st.sidebar.info(info_text)
+
+t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp, step=1.0)
+start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
+
+# 4. 물리 연산
+k_total = INSULATION_MATERIALS[insul_mat_key]["k_mod"] * INNER_MATERIALS[inner_mat_key]["k_mod"] * OUTER_MATERIALS[outer_mat_key]["k_mod"]
+
+if t_init > t_env and t_target < t_init and t_target > t_env:
+    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
+    is_valid = True
+else:
+    time_to_target = 30.0
+    is_valid = False
+    st.error("❌ 입력 온도를 확인해 주세요. (초기온도 > 목표온도 > 외부온도)")
+
+if t_env >= 28:
+    bg_theme = "summer"
+elif t_env <= 10:
+    bg_theme = "winter"
+else:
+    bg_theme = "normal"
+
+config_data = {
+    "tInit": float(t_init),
+    "tEnv": float(t_env),
+    "tTarget": float(t_target),
+    "kTotal": float(k_total),
+    "timeToTarget": float(time_to_target),
+    "bgTheme": bg_theme,
+    "innerColorHex": INNER_MATERIALS[inner_mat_key]["color"],
+    "shouldStart": True if (start_btn and is_valid) else False
+}
+
+# 5. UI 출력
+col1, col2 = st.columns([1.3, 1])
+
+with col1:
+    st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
+    in_name = inner_mat_key.split(' (')[0]
+    ins_name = insul_mat_key.split(' (')[0]
+    out_name = outer_mat_key.split(' (')[0]
+    st.caption("선택 조합: **" + in_name + "** + **" + ins_name + "** + **" + out_name + "**")
+
+    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        json_str = json.dumps(config_data)
+        data_tag = '<div id="sim-data" style="display:none;">' + json_str + '</div>'
+        components.html(html_content + data_tag, height=490)
+    else:
+        st.error("❌ index.html 파일이 main.py와 동일한 위치에 존재하는지 확인해 주세요.")
+
+with col2:
+    st.subheader("📊 소재 계산 및 보온 대시보드")
+    st.markdown("### 🧪 선택한 소재 특성")
+    st.markdown("- **내부:** " + inner_desc)
+    st.markdown("- **단열:** " + insul_desc)
+    st.markdown("- **외부:** " + outer_desc)
+    st.markdown("---")
+    st.markdown("### 🧪 계산된 총 열전달 계수 (k)")
+    st.code("k_total = " + f"{k_total:.5f}")
+    st.markdown("---")
+    st.markdown("### ⏱️ 예상 보온 시간")
+    st.success("🎯 **목표 온도 도달 시간:** 약 **" + f"{time_to_target:.1f}" + " 분**")
