@@ -1,6 +1,4 @@
 import math
-import os
-import json
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -17,7 +15,7 @@ st.caption(
 )
 
 # ---------------------------------------------------------
-# 2. 소재별 상세 정보 및 친절한 설명 데이터 정의
+# 2. 소재별 상세 정보 및 설명 데이터 정의
 # ---------------------------------------------------------
 INNER_MATERIALS = {
     "SUS304/316L 위생 스테인리스 (위생성 & 내구성 우수)": {
@@ -103,7 +101,7 @@ t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp,
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # ---------------------------------------------------------
-# 4. 연산 및 설정 파라미터 계산
+# 4. 연산 및 물리 계산
 # ---------------------------------------------------------
 k_total = (
     INSULATION_MATERIALS[insul_mat_key]["k_mod"]
@@ -121,21 +119,10 @@ else:
 
 bg_theme = "summer" if t_env >= 28 else ("winter" if t_env <= 10 else "normal")
 inner_color_hex = INNER_MATERIALS[inner_mat_key]["color"]
-should_start = True if (start_btn and is_valid) else False
-
-config_data = {
-    "tInit": float(t_init),
-    "tEnv": float(t_env),
-    "tTarget": float(t_target),
-    "kTotal": float(k_total),
-    "timeToTarget": float(time_to_target),
-    "bgTheme": bg_theme,
-    "innerColorHex": inner_color_hex,
-    "shouldStart": should_start,
-}
+should_start = "true" if (start_btn and is_valid) else "false"
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 index.html 연동 (파이썬 따옴표 처리 완전 제거)
+# 5. 메인 UI 및 통합 3D 렌더링 엔진
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
@@ -147,38 +134,23 @@ with col1:
     out_name = outer_mat_key.split(' (')[0]
     st.caption("선택한 조합: **" + in_name + "** + **" + ins_name + "** + **" + out_name + "**")
 
-    html_path = os.path.join(os.path.dirname(__file__), "index.html")
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
-        
-        # HTML 하단에 안전한 JSON 데이터 창만 매핑
-        json_str = json.dumps(config_data)
-        data_div = '<div id="sim-data" style="display:none;">' + json_str + '</div>'
-        
-        components.html(html_content + data_div, height=490)
-    else:
-        st.error("❌ index.html 파일을 찾을 수 없습니다. main.py와 동일한 위치에 생성해 주세요.")
-
-with col2:
-    st.subheader("📊 소재 계산 및 보온 대시보드")
-
-    st.markdown("### 🧪 선택한 소재 종합 특성 리포트")
-    st.markdown(INNER_MATERIALS[inner_mat_key]["desc"])
-    st.markdown(INSULATION_MATERIALS[insul_mat_key]["desc"])
-    st.markdown(OUTER_MATERIALS[outer_mat_key]["desc"])
-
-    st.markdown("---")
-    st.markdown("### 🧪 계산된 총 열전달 계수 (k)")
-    st.code("k_total = " + f"{k_total:.5f}")
-
-    st.markdown("---")
-    st.markdown("### ⏱️ 예상 보온 시간")
-    st.success("🎯 **목표 온도(" + str(t_target) + "°C) 도달 시간:** 약 **" + f"{time_to_target:.1f}" + " 분**")
-
-    st.markdown("---")
-    st.info(
-        "💡 **시뮬레이션 안내:**\n\n"
-        "좌측 사이드바에서 소재를 선택하고 **[🚀 시뮬레이션 시작]**을 누르면, "
-        "3D 텀블러 좌측 상단의 실시간 온도와 아우라 색상이 **90.0°C → 목표 온도**로 연속적으로 떨어집니다."
-    )
+    html_code = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }}
+        #canvas-container {{ width: 100vw; height: 480px; position: relative; }}
+        #temp-display {{
+            position: absolute; top: 15px; left: 15px; color: #fff;
+            background: rgba(0, 0, 0, 0.75); padding: 10px 16px; border-radius: 8px;
+            font-size: 18px; font-weight: bold; border: 1px solid #444; z-index: 10;
+        }}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="canvas-container">
+        <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">{t_init:.1f}</span> °C</div>
+    </div>
