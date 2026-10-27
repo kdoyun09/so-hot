@@ -1,4 +1,6 @@
 import math
+import os
+import json
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -121,10 +123,21 @@ else:
 
 bg_theme = "summer" if t_env >= 28 else ("winter" if t_env <= 10 else "normal")
 inner_color_hex = INNER_MATERIALS[inner_mat_key]["color"]
-should_start = "true" if (start_btn and is_valid) else "false"
+should_start = True if (start_btn and is_valid) else False
+
+config_data = {
+    "tInit": float(t_init),
+    "tEnv": float(t_env),
+    "tTarget": float(t_target),
+    "kTotal": float(k_total),
+    "timeToTarget": float(time_to_target),
+    "bgTheme": bg_theme,
+    "innerColorHex": inner_color_hex,
+    "shouldStart": should_start,
+}
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 안심 리스트 방식 HTML 렌더링
+# 5. 메인 UI 및 index.html 연동
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
@@ -137,15 +150,30 @@ with col1:
     caption_text = "선택한 조합: **{}** + **{}** + **{}**".format(in_name, ins_name, out_name)
     st.caption(caption_text)
 
-    # 파이썬 구문 오류를 완전 차단하기 위해 리스트 결합 방식 사용
-    html_lines = [
-        '<!DOCTYPE html>',
-        '<html>',
-        '<head>',
-        '    <meta charset="utf-8">',
-        '    <style>',
-        '        body { margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }',
-        '        #canvas-container { width: 100vw; height: 480px; position: relative; }',
-        '        #temp-display {',
-        '            position: absolute; top: 15px; left: 15px; color: #fff;',
-        '            background: rgba(0, 0, 0, 0.75); padding: 10px 16px; border-radius: 8
+    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        
+        json_str = json.dumps(config_data)
+        data_tag = '<div id="sim-data" style="display:none;">{}</div>'.format(json_str)
+        
+        components.html(html_content + data_tag, height=490)
+    else:
+        st.error("❌ index.html 파일을 찾을 수 없습니다. main.py와 동일한 위치에 생성해 주세요.")
+
+with col2:
+    st.subheader("📊 소재 계산 및 보온 대시보드")
+
+    st.markdown("### 🧪 선택한 소재 종합 특성 리포트")
+    st.markdown(inner_desc)
+    st.markdown(insul_desc)
+    st.markdown(outer_desc)
+
+    st.markdown("---")
+    st.markdown("### 🧪 계산된 총 열전달 계수 (k)")
+    st.code("k_total = {:.5f}".format(k_total))
+
+    st.markdown("---")
+    st.markdown("### ⏱️ 예상 보온 시간")
+    st.success("
