@@ -71,12 +71,32 @@ OUTER_MATERIALS = {
 }
 
 # ---------------------------------------------------------
-# 3. 사이드바 UI 설정
+# 3. 사이드바 UI 설정 (구문 안전 가독화)
 # ---------------------------------------------------------
 st.sidebar.header("🛠️ 텀블러 커스터마이징")
 
 inner_mat_key = st.sidebar.selectbox("1. 내부 재질 (음료 접촉)", list(INNER_MATERIALS.keys()))
-st.sidebar.caption(INNER_MATERIALS[inner_mat_key]["desc"])
+inner_desc = INNER_MATERIALS[inner_mat_key]["desc"]
+st.sidebar.caption(inner_desc)
 
 insul_mat_key = st.sidebar.selectbox("2. 단열 구조 (중간 단열재)", list(INSULATION_MATERIALS.keys()))
-st.sidebar.caption(INS
+insul_desc = INSULATION_MATERIALS[insul_mat_key]["desc"]
+st.sidebar.caption(insul_desc)
+
+outer_mat_key = st.sidebar.selectbox("3. 외부 재질 (손잡이/외벽)", list(OUTER_MATERIALS.keys()))
+outer_desc = OUTER_MATERIALS[outer_mat_key]["desc"]
+st.sidebar.caption(outer_desc)
+
+st.sidebar.markdown("---")
+st.sidebar.header("🌡️ 환경 & 온도 설정")
+t_env = st.sidebar.slider("현재 텀블러가 있는 곳의 외부 온도 (°C)", -10, 40, 20)
+t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=90.0, step=1.0)
+
+rec_temp = 58.0
+if t_env < 5:
+    rec_temp = 62.0
+elif t_env > 28:
+    rec_temp = 52.0
+
+st.sidebar.info(
+    "💡 **목표 온도 추천 가이드:**\n\n현재 외부 온도(" + str(t_env) + "°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **
