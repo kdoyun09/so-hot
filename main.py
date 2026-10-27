@@ -1,10 +1,9 @@
 import math
-import time
 import streamlit as st
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. 페이지 기본 설정 및 세션 초기화
+# 1. 페이지 기본 설정
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="3D 커스텀 텀블러 보온 시뮬레이터", page_icon="🥤", layout="wide"
@@ -14,11 +13,6 @@ st.title("🥤 3D 커스텀 텀블러 보온·보냉 시뮬레이터")
 st.caption(
     "내부·단열재·외부 소재를 세세하게 직접 조합하여 열전달률을 계산하고, 실시간 연속 온도가 떨어지는 과정을 3D로 관찰하세요."
 )
-
-if "simulating" not in st.session_state:
-    st.session_state.simulating = False
-if "current_time" not in st.session_state:
-    st.session_state.current_time = 0.0
 
 # ---------------------------------------------------------
 # 2. 소재별 열전달 데이터 정의
@@ -68,7 +62,7 @@ t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp,
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # ---------------------------------------------------------
-# 4. 연산 및 실시간 시간 처리
+# 4. 연산 및 물리 파라미터 계산
 # ---------------------------------------------------------
 k_total = (
     INSULATION_MATERIALS[insul_mat]["k_mod"]
@@ -84,15 +78,79 @@ else:
     is_valid = False
     st.error("❌ 입력한 온도가 올바르지 않습니다. (초기온도 > 목표온도 > 외부온도 규칙 필요)")
 
-if start_btn and is_valid:
-    st.session_state.simulating = True
-    st.session_state.current_time = 0.0
+bg_theme = "summer" if t_env >= 28 else ("winter" if t_env <= 10 else "normal")
+inner_color_hex = INNER_MATERIALS[inner_mat]["color"]
+should_start = "true" if (start_btn and is_valid) else "false"
 
-if st.session_state.simulating:
-    if st.session_state.current_time < time_to_target:
-        st.session_state.current_time += time_to_target / 60.0
-        time.sleep(0.04)
-        st.rerun()
-    else:
-        st.session_state.current_time = time_to_target
-        st.session_state.simulating = False
+# ---------------------------------------------------------
+# 5. 메인 UI 화면 렌더링 (단일 통합 HTML/JS 엔진)
+# ---------------------------------------------------------
+col1, col2 = st.columns([1.3, 1])
+
+with col1:
+    st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
+    st.caption(f"선택한 조합: **{inner_mat}** + **{insul_mat}** + **{outer_mat}**")
+
+    html_code = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }}
+        #canvas-container {{ width: 100%; height: 480px; position: relative; }}
+        #temp-display {{
+            position: absolute; top: 15px; left: 15px; color: #fff;
+            background: rgba(0, 0, 0, 0.7); padding: 10px 16px; border-radius: 8px;
+            font-size: 18px; font-weight: bold; border: 1px solid #444;
+        }}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="canvas-container">
+        <div id="temp-display">🌡️ 실시간 텀블러 내부 온도: <span id="current-temp-val">{t_init:.1f}</span> °C</div>
+    </div>
+    <script>
+        window.onload = function() {{
+            const container = document.getElementById("canvas-container");
+            const tempValElem = document.getElementById("current-temp-val");
+
+            const scene = new THREE.Scene();
+            
+            let bgColor = 0x181818;
+            let gridColor = 0x444444;
+            if ("{bg_theme}" === "summer") {{
+                bgColor = 0x2b1c0c;
+                gridColor = 0x885522;
+            }} else if ("{bg_theme}" === "winter") {{
+                bgColor = 0x0a1622;
+                gridColor = 0x3377aa;
+            }}
+            scene.background = new THREE.Color(bgColor);
+
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(2.8, 2.2, 5.8);
+
+            const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            const grid = new THREE.GridHelper(10, 10, gridColor, 0x222222);
+            grid.position.y = -1.9;
+            scene.add(grid);
+
+            const tumblerGroup = new THREE.Group();
+
+            // 외벽 불투명
+            const solidMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, 0, Math.PI),
+                new THREE.MeshStandardMaterial({{ color: 0x333333, roughness: 0.4, side: THREE.DoubleSide }})
+            );
+            tumblerGroup.add
