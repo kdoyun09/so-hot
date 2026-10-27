@@ -96,7 +96,7 @@ elif t_env > 28:
     rec_temp = 52.0
 
 st.sidebar.info(
-    f"💡 **목표 온도 추천 가이드:**\n\n현재 외부 온도({t_env}°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **{rec_temp}°C 내외**입니다."
+    "💡 **목표 온도 추천 가이드:**\n\n현재 외부 온도(" + str(t_env) + "°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **" + str(rec_temp) + "°C 내외**입니다."
 )
 
 t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp, step=1.0)
@@ -135,21 +135,37 @@ config_data = {
 }
 
 # ---------------------------------------------------------
-# 5. 메인 UI 및 index.html 연동
+# 5. 메인 UI 및 index.html 연동 (문자열 파싱 에러 방지)
 # ---------------------------------------------------------
 col1, col2 = st.columns([1.3, 1])
 
 with col1:
     st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
-    st.caption(f"선택한 조합: **{inner_mat_key.split(' (')[0]}** + **{insul_mat_key.split(' (')[0]}** + **{outer_mat_key.split(' (')[0]}**")
+    st.caption("선택한 조합: **" + inner_mat_key.split(' (')[0] + "** + **" + insul_mat_key.split(' (')[0] + "** + **" + outer_mat_key.split(' (')[0] + "**")
 
     html_path = os.path.join(os.path.dirname(__file__), "index.html")
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        script_call = f"""
+        # f-string 대신 안전한 %s 포맷팅 사용
+        script_template = """
         <script>
-            function runSim() {{
-                if (window.initSimulator) {{
-                    window.initSimulator({json.dumps(config_data)});
+            function runSim() {
+                if (window.initSimulator) {
+                    window.initSimulator(%s);
+                } else {
+                    setTimeout(runSim, 50);
+                }
+            }
+            runSim();
+        </script>
+        """
+        script_call = script_template % json.dumps(config_data)
+        full_html = html_content + script_call
+        components.html(full_html, height=490)
+    else:
+        st.error("❌ index.html 파일을 찾을 수 없습니다. main.py와 동일한 위치에 생성해 주세요.")
+
+with col2:
+    st.subheader("📊 소재 계산 및 보
