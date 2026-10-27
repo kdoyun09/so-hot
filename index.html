@@ -13,20 +13,71 @@
             pointer-events: none;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div id="canvas-container">
-        <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">90.0</span> °C</div>
+        <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">--</span> °C</div>
     </div>
 
-    <!-- Three.js CDN 라이브러리 안전 로드 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
     <script>
-        function start3DSimulator() {
+        function run3DSimulator() {
             if (typeof THREE === "undefined") {
-                setTimeout(start3DSimulator, 50);
+                setTimeout(run3DSimulator, 50);
                 return;
             }
 
-            const dataElem
+            const dataElem = document.getElementById("sim-data");
+            let config = { tInit: 90.0, tEnv: 20.0, tTarget: 58.0, kTotal: 0.01, timeToTarget: 60.0, bgTheme: "normal", innerColorHex: "0xc0c8d0", shouldStart: false };
+            if (dataElem && dataElem.innerText) {
+                try { config = JSON.parse(dataElem.innerText); } catch(e) {}
+            }
+
+            const container = document.getElementById("canvas-container");
+            const tempValElem = document.getElementById("current-temp-val");
+            if (config && config.tInit) tempValElem.innerText = Number(config.tInit).toFixed(1);
+
+            const width = container.clientWidth || window.innerWidth || 600;
+            const height = 480;
+
+            const scene = new THREE.Scene();
+            let bgColor = (config.bgTheme === "summer") ? 0x2b1c0c : ((config.bgTheme === "winter") ? 0x0a1622 : 0x181818);
+            scene.background = new THREE.Color(bgColor);
+
+            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(0, 0.8, 7.5);
+            camera.lookAt(0, 0, 0);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            container.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            const gridColor = (config.bgTheme === "summer") ? 0x885522 : ((config.bgTheme === "winter") ? 0x3377aa : 0x444444);
+            const grid = new THREE.GridHelper(10, 10, gridColor, 0x333333);
+            grid.position.y = -2.2;
+            scene.add(grid);
+
+            const tumblerGroup = new THREE.Group();
+
+            // 1. 불투명 외벽 (반단면)
+            const solidMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, 0, Math.PI),
+                new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4, side: THREE.DoubleSide })
+            );
+            tumblerGroup.add(solidMesh);
+
+            // 2. 투명 외벽 (반단면)
+            const glassMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.9, 0.75, 3.0, 32, 1, false, Math.PI, Math.PI),
+                new THREE.MeshStandardMaterial({ color: 0x888888, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
+            );
+            tumblerGroup.add(glassMesh);
+
+            // 3. 내벽 레이어
+            let parsedColor = parseInt((config.innerColorHex || "0xc0c8d0").replace("0x", ""), 16
