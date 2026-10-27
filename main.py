@@ -1,4 +1,6 @@
 import math
+import os
+import json
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -77,79 +79,4 @@ inner_mat_key = st.sidebar.selectbox("1. 내부 재질 (음료 접촉)", list(IN
 st.sidebar.caption(INNER_MATERIALS[inner_mat_key]["desc"])
 
 insul_mat_key = st.sidebar.selectbox("2. 단열 구조 (중간 단열재)", list(INSULATION_MATERIALS.keys()))
-st.sidebar.caption(INSULATION_MATERIALS[insul_mat_key]["desc"])
-
-outer_mat_key = st.sidebar.selectbox("3. 외부 재질 (손잡이/외벽)", list(OUTER_MATERIALS.keys()))
-st.sidebar.caption(OUTER_MATERIALS[outer_mat_key]["desc"])
-
-st.sidebar.markdown("---")
-st.sidebar.header("🌡️ 환경 & 온도 설정")
-t_env = st.sidebar.slider("현재 텀블러가 있는 곳의 외부 온도 (°C)", -10, 40, 20)
-t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=90.0, step=1.0)
-
-rec_temp = 58.0
-if t_env < 5:
-    rec_temp = 62.0
-elif t_env > 28:
-    rec_temp = 52.0
-
-st.sidebar.info(
-    "💡 **목표 온도 추천 가이드:**\n\n현재 외부 온도(" + str(t_env) + "°C) 기준, 화상 없이 맛을 즐기기 가장 좋은 온도는 **" + str(rec_temp) + "°C 내외**입니다."
-)
-
-t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp, step=1.0)
-start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
-
-# ---------------------------------------------------------
-# 4. 연산 및 물리 계산
-# ---------------------------------------------------------
-k_total = (
-    INSULATION_MATERIALS[insul_mat_key]["k_mod"]
-    * INNER_MATERIALS[inner_mat_key]["k_mod"]
-    * OUTER_MATERIALS[outer_mat_key]["k_mod"]
-)
-
-if t_init > t_env and t_target < t_init and t_target > t_env:
-    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
-    is_valid = True
-else:
-    time_to_target = 30.0
-    is_valid = False
-    st.error("❌ 입력한 온도가 올바르지 않습니다. (초기온도 > 목표온도 > 외부온도 규칙 필요)")
-
-bg_theme = "summer" if t_env >= 28 else ("winter" if t_env <= 10 else "normal")
-inner_color_hex = INNER_MATERIALS[inner_mat_key]["color"]
-should_start = "true" if (start_btn and is_valid) else "false"
-
-# ---------------------------------------------------------
-# 5. 메인 UI 및 안전한 HTML 렌더링 (리스트 결합 방식)
-# ---------------------------------------------------------
-col1, col2 = st.columns([1.3, 1])
-
-with col1:
-    st.subheader("🎮 3D 커스텀 구조 반단면 텀블러")
-    
-    in_name = inner_mat_key.split(' (')[0]
-    ins_name = insul_mat_key.split(' (')[0]
-    out_name = outer_mat_key.split(' (')[0]
-    st.caption("선택한 조합: **" + in_name + "** + **" + ins_name + "** + **" + out_name + "**")
-
-    html_lines = [
-        '<!DOCTYPE html>',
-        '<html>',
-        '<head>',
-        '    <meta charset="utf-8">',
-        '    <style>',
-        '        body { margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }',
-        '        #canvas-container { width: 100vw; height: 480px; position: relative; }',
-        '        #temp-display {',
-        '            position: absolute; top: 15px; left: 15px; color: #fff;',
-        '            background: rgba(0, 0, 0, 0.75); padding: 10px 16px; border-radius: 8px;',
-        '            font-size: 18px; font-weight: bold; border: 1px solid #444; z-index: 10;',
-        '        }',
-        '    </style>',
-        '    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>',
-        '</head>',
-        '<body>',
-        '    <div id="canvas-container">',
-        '        <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val
+st.sidebar.caption(INS
