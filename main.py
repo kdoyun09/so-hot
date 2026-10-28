@@ -106,8 +106,13 @@ with col1:
         with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         json_str = json.dumps(config_data)
-        data_tag = '<div id="sim-data" style="display:none;">' + json_str + '</div>'
-        components.html(html_content + data_tag, height=490)
+        # 3D JavaScript가 실행되기 전에 설정값을 먼저 전달합니다.
+        config_script = "<script>window.SO_HOT_CONFIG = " + json_str + ";</script>"
+        if "</head>" in html_content:
+            html_content = html_content.replace("</head>", config_script + "</head>", 1)
+        else:
+            html_content = config_script + html_content
+        components.html(html_content, height=500)
     else:
         st.error("❌ index.html 파일이 main.py와 동일한 위치에 존재하는지 확인해 주세요.")
 
