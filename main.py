@@ -88,7 +88,10 @@ config_data = {
     "timeToTarget": float(time_to_target),
     "bgTheme": bg_theme,
     "innerColorHex": INNER_MATERIALS[inner_mat_key]["color"],
-    "shouldStart": True if (start_btn and is_valid) else False
+    "shouldStart": True if (start_btn and is_valid) else False,
+    "innerMaterialName": inner_mat_key,
+    "insulationName": insul_mat_key,
+    "outerMaterialName": outer_mat_key
 }
 
 # 5. UI 출력
