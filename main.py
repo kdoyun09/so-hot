@@ -32,12 +32,12 @@ OUTER_MATERIALS = {
 # 음료별 권장 섭취 온도 범위 (일반적인 기준이며 개인 취향에 따라 달라질 수 있음)
 DRINKS = {
     "뜨거운 커피": {"kind": "hot", "good_min": 50, "good_max": 65, "default_temp": 85, "desc": "약 50~65°C가 마시기 좋은 범위"},
-    "아이스 커피": {"kind": "cold", "good_min": 4, "good_max": 10, "default_temp": 8, "desc": "약 4~10°C가 마시기 좋은 범위"},
+    "아이스 커피": {"kind": "cold", "good_min": 4, "good_max": 10, "default_temp": 25, "desc": "약 4~10°C가 마시기 좋은 범위"},
     "차(녹차·홍차)": {"kind": "hot", "good_min": 50, "good_max": 65, "default_temp": 75, "desc": "약 50~65°C가 마시기 좋은 범위"},
-    "아이스티": {"kind": "cold", "good_min": 4, "good_max": 10, "default_temp": 8, "desc": "약 4~10°C가 마시기 좋은 범위"},
-    "물": {"kind": "neutral", "good_min": 10, "good_max": 40, "default_temp": 20, "desc": "약 10~40°C를 편안하게 마시는 범위로 설정"},
+    "아이스티": {"kind": "cold", "good_min": 4, "good_max": 10, "default_temp": 25, "desc": "약 4~10°C가 마시기 좋은 범위"},
+    "물": {"kind": "neutral", "good_min": 10, "good_max": 40, "default_temp": 50, "desc": "약 10~40°C를 편안하게 마시는 범위로 설정"},
     "라떼·우유": {"kind": "hot", "good_min": 45, "good_max": 60, "default_temp": 65, "desc": "약 45~60°C가 마시기 좋은 범위"},
-    "스포츠음료": {"kind": "cold", "good_min": 4, "good_max": 12, "default_temp": 8, "desc": "약 4~12°C가 마시기 좋은 범위"}
+    "스포츠음료": {"kind": "cold", "good_min": 4, "good_max": 12, "default_temp": 25, "desc": "약 4~12°C가 마시기 좋은 범위"}
 }
 
 # 3. 사이드바 UI
@@ -75,7 +75,8 @@ else:
 info_text = "💡 외부 온도(" + str(t_env) + "°C) 기준 추천 목표 온도는 **" + str(rec_temp) + "°C**입니다."
 st.sidebar.info(info_text)
 
-t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=rec_temp, step=1.0)
+drink_target = (drink_info["good_min"] + drink_info["good_max"]) / 2 if drink_info["kind"] != "neutral" else 25.0
+t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=float(drink_target), step=1.0)
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # 4. 물리 연산
@@ -83,11 +84,12 @@ k_total = INSULATION_MATERIALS[insul_mat_key]["k_mod"] * INNER_MATERIALS[inner_m
 
 if t_init > t_env and t_target < t_init and t_target > t_env:
     time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
-    is_valid = True
 else:
     time_to_target = 30.0
-    is_valid = False
-    st.error("❌ 입력 온도를 확인해 주세요. (초기온도 > 목표온도 > 외부온도)")
+# 3D 시뮬레이션은 차가운 음료도 표현하므로 초기/목표 온도가 다르면 실행 가능
+is_valid = abs(t_init - t_target) > 0.01
+if not is_valid:
+    st.warning("초기 온도와 목표 온도를 다르게 설정하면 온도 변화를 볼 수 있습니다.")
 
 if t_env >= 28:
     bg_theme = "summer"
