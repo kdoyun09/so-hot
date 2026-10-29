@@ -5,22 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#181818;font-family:Arial,sans-serif}
-#canvas-container{width:100%;height:480px;position:relative;overflow:hidden;cursor:grab}
+#canvas-container{width:100%;height:500px;position:relative;overflow:hidden;cursor:grab}
 #canvas-container:active{cursor:grabbing}
 #canvas-container canvas{display:block;width:100%;height:100%}
-#temp-display{position:absolute;top:12px;left:12px;color:#fff;background:rgba(0,0,0,.78);padding:9px 13px;border-radius:8px;font-size:16px;font-weight:bold;border:1px solid #555;z-index:5;pointer-events:none}
-#status{position:absolute;left:12px;bottom:12px;max-width:calc(100% - 48px);color:#eee;background:rgba(0,0,0,.7);padding:7px 10px;border-radius:6px;font-size:12px;z-index:5}
+#temp-display{position:absolute;top:12px;left:12px;color:#fff;background:rgba(0,0,0,.8);padding:9px 13px;border-radius:8px;font-size:15px;font-weight:bold;border:1px solid #555;z-index:5;pointer-events:none}
+#status{position:absolute;left:12px;bottom:10px;max-width:calc(100% - 24px);color:#eee;background:rgba(0,0,0,.72);padding:7px 10px;border-radius:6px;font-size:12px;z-index:5;pointer-events:none}
+#legend{position:absolute;right:12px;top:12px;color:#eee;background:rgba(0,0,0,.76);border:1px solid #555;border-radius:8px;padding:9px 11px;font-size:11px;line-height:1.7;z-index:5;pointer-events:none}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 <div id="canvas-container">
-  <div id="temp-display">🌡️ 실시간 온도: <span id="current-temp-val">--</span> °C</div>
+  <div id="temp-display">🌡️ 음료 온도: <span id="current-temp-val">--</span> °C</div>
+  <div id="legend">
+    <div><span class="dot" style="background:#c4cbd1"></span>내부 용기</div>
+    <div><span class="dot" style="background:#56b8d8"></span>단열층</div>
+    <div><span class="dot" style="background:#4b5967"></span>외부 케이스</div>
+  </div>
   <div id="status">3D 모델을 불러오는 중...</div>
 </div>
 <script>
 (function(){
-  const defaults={tInit:90,tEnv:20,tTarget:58,kTotal:.01,timeToTarget:60,bgTheme:"normal",innerColorHex:"0xc0c8d0",shouldStart:false};
+  const defaults={tInit:90,tEnv:20,tTarget:58,kTotal:.01,timeToTarget:60,bgTheme:"normal",innerColorHex:"0xc0c8d0",shouldStart:false,innerMaterialName:"SUS304/316L",insulationName:"진공 단열층",outerMaterialName:"파우더 코팅 메탈"};
   const config=Object.assign({},defaults,window.SO_HOT_CONFIG||{});
   const container=document.getElementById("canvas-container");
   const status=document.getElementById("status");
@@ -30,44 +37,133 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
   let currentTemp=Number(config.tInit)||90;
   const initialTemp=currentTemp,envTemp=Number(config.tEnv)||20;
   const durationMs=Math.max(8000,Math.min(45000,(Number(config.timeToTarget)||60)*500));
+  const innerName=String(config.innerMaterialName||"");
+  const insulationName=String(config.insulationName||"");
+  const outerName=String(config.outerMaterialName||"");
   tempVal.textContent=currentTemp.toFixed(1);
+
   function fail(message){status.textContent="3D 화면 오류: "+message;status.style.color="#ffb4b4";}
-  function mat(color,roughness=.5,metalness=0,extra={}){return new THREE.MeshStandardMaterial(Object.assign({color,roughness,metalness,side:THREE.DoubleSide},extra));}
-  function addMesh(geometry,material,y=0){const m=new THREE.Mesh(geometry,material);m.position.y=y;group.add(m);return m;}
+  function standard(color,roughness,metalness,extra){return new THREE.MeshStandardMaterial(Object.assign({color:color,roughness:roughness,metalness:metalness,side:THREE.DoubleSide},extra||{}));}
+  function addMesh(geometry,material,y){const mesh=new THREE.Mesh(geometry,material);mesh.position.y=y||0;group.add(mesh);return mesh;}
+  function halfCylinder(rt,rb,h,start,arc,material,y){return addMesh(new THREE.CylinderGeometry(rt,rb,h,64,1,false,start,arc),material,y||0);}
+  function ring(radius,tube,y,color,metalness){
+    const mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,12,64),standard(color,.28,metalness||0));
+    mesh.rotation.x=Math.PI/2;mesh.position.y=y;group.add(mesh);return mesh;
+  }
   function init(){
     if(!window.THREE){fail("Three.js를 불러오지 못했습니다. 네트워크 또는 CDN 접근을 확인해 주세요.");return;}
     try{
       scene=new THREE.Scene();
-      let bg=0x181818,gridColor=0x444444;
+      let bg=0x181b20,gridColor=0x46505b;
       if(config.bgTheme==="summer"){bg=0x2b1c0c;gridColor=0x885522;}
       if(config.bgTheme==="winter"){bg=0x0a1622;gridColor=0x3377aa;}
       scene.background=new THREE.Color(bg);
       const width=Math.max(container.clientWidth,320);
-      camera=new THREE.PerspectiveCamera(42,width/480,.1,100);
-      camera.position.set(0,.45,7.2);camera.lookAt(0,0,0);
+      camera=new THREE.PerspectiveCamera(39,width/500,.1,100);
+      camera.position.set(0,.35,7.4);camera.lookAt(0,0,0);
       renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-      renderer.setSize(width,480);
+      renderer.setSize(width,500);
       renderer.outputEncoding=THREE.sRGBEncoding;
       container.insertBefore(renderer.domElement,container.firstChild);
-      scene.add(new THREE.AmbientLight(0xffffff,1.25));
-      const keyLight=new THREE.DirectionalLight(0xffffff,2);keyLight.position.set(4,7,6);scene.add(keyLight);
-      const rimLight=new THREE.DirectionalLight(0x8fcfff,.8);rimLight.position.set(-4,2,-4);scene.add(rimLight);
-      const grid=new THREE.GridHelper(10,20,gridColor,0x333333);grid.position.y=-2.05;scene.add(grid);
-      group=new THREE.Group();group.rotation.y=-.45;scene.add(group);
-      addMesh(new THREE.CylinderGeometry(.92,.76,3,48,1,false,0,Math.PI),mat(0x424a52,.35,.45));
-      addMesh(new THREE.CylinderGeometry(.92,.76,3,48,1,false,Math.PI,Math.PI),mat(0x91b7c9,.25,.15,{transparent:true,opacity:.34,depthWrite:false}));
-      const raw=String(config.innerColorHex||"0xc0c8d0").replace(/^0x/i,"");
-      addMesh(new THREE.CylinderGeometry(.81,.67,2.78,48,1,false,0,Math.PI),mat(parseInt(raw,16)||0xc0c8d0,.24,.65));
-      addMesh(new THREE.CylinderGeometry(.77,.77,.12,48),mat(0x252a30,.4,.35),-1.48);
-      addMesh(new THREE.CylinderGeometry(.94,.94,.28,48),mat(0x24282d,.35,.25),1.62);
-      addMesh(new THREE.CylinderGeometry(.65,.65,.06,48),mat(0x111418,.3,.2),1.79);
-      const handle=new THREE.Mesh(new THREE.TorusGeometry(.66,.085,14,40,Math.PI*1.15),mat(0x252a30,.4,.25));
-      handle.position.set(-1.05,.05,0);handle.rotation.z=Math.PI/2;group.add(handle);
-      liquid=addMesh(new THREE.CylinderGeometry(.72,.60,2.38,48),new THREE.MeshStandardMaterial({color:0x9a5725,roughness:.22,side:THREE.DoubleSide,transparent:true,opacity:.92}),-.20);
-      aura=new THREE.Mesh(new THREE.CylinderGeometry(1.02,.88,3.15,48,1,true),new THREE.MeshBasicMaterial({color:0xff5522,transparent:true,opacity:.08,side:THREE.DoubleSide}));
+      scene.add(new THREE.AmbientLight(0xffffff,1.05));
+      const keyLight=new THREE.DirectionalLight(0xffffff,2.2);keyLight.position.set(4,7,6);scene.add(keyLight);
+      const fillLight=new THREE.DirectionalLight(0x8fcfff,.75);fillLight.position.set(-4,2,3);scene.add(fillLight);
+      const rimLight=new THREE.DirectionalLight(0xffd4a1,.7);rimLight.position.set(-3,4,-5);scene.add(rimLight);
+      const grid=new THREE.GridHelper(10,20,gridColor,0x303943);grid.position.y=-2.08;scene.add(grid);
+      group=new THREE.Group();group.rotation.y=-.48;scene.add(group);
+
+      // 1) Inner vessel: material choice changes both color and surface finish.
+      let innerMat;
+      if(innerName.includes("세라믹")){
+        innerMat=standard(0xf1eee4,.68,0.02);
+      }else if(innerName.includes("유리")){
+        innerMat=standard(0x7fcde8,.12,.05,{transparent:true,opacity:.58,depthWrite:false});
+      }else{
+        innerMat=standard(0xc5cbd1,.2,.88);
+      }
+      halfCylinder(.82,.69,2.83,0,Math.PI,innerMat,-.02);
+      // Inner lip and bottom rim make the mouth and wall thickness visible.
+      ring(.84,.055,1.43,innerName.includes("세라믹")?0xf1eee4:innerName.includes("유리")?0x7fcde8:0xe0e5e9,innerName.includes("유리")?0:.75);
+      ring(.70,.045,-1.43,0x9da7b0,.55);
+
+      // 2) Insulation cross-section: each choice gets a distinctive visual language.
+      if(insulationName.includes("진공")){
+        // Vacuum gap: dark, nearly empty annulus with reflective blue inner edges.
+        halfCylinder(.965,.835,2.65,0,Math.PI,standard(0x102b3a,.18,.15,{transparent:true,opacity:.42,depthWrite:false}),0);
+        for(let y=-1.12;y<=1.13;y+=.56){
+          ring(.89,.012,y,0x51c8e8,.65);
+        }
+        status.textContent="진공 단열층: 비어 있는 간격과 금속 반사층을 표시 · 드래그해 회전";
+      }else if(insulationName.includes("에어로겔")){
+        halfCylinder(.965,.835,2.65,0,Math.PI,standard(0x3f91a9,.9,0,{transparent:true,opacity:.78}),0);
+        // Aerogel's porous texture is represented by many tiny pale-blue beads.
+        const beadMat=new THREE.MeshStandardMaterial({color:0xb7edf4,roughness:1,metalness:0});
+        for(let row=0;row<9;row++){
+          const y=-1.18+row*.29;
+          for(let i=0;i<15;i++){
+            const theta=.10+i*(Math.PI-.20)/14;
+            const r=.89+((row+i)%3)*.018;
+            const bead=new THREE.Mesh(new THREE.SphereGeometry(.025+((i+row)%3)*.006,7,6),beadMat);
+            bead.position.set(Math.sin(theta)*r,y,Math.cos(theta)*r);
+            group.add(bead);
+          }
+        }
+        status.textContent="에어로겔: 다공성 입자 질감을 표현 · 드래그해 회전";
+      }else{
+        halfCylinder(.965,.835,2.65,0,Math.PI,standard(0xd6a56d,.95,0),0);
+        // Foam texture: shallow raised bands distinguish it from vacuum/aerogel.
+        for(let y=-1.10;y<=1.11;y+=.34){halfCylinder(.972,.842,.035,0,Math.PI,standard(0xf0c991,.98,0),y);}
+        status.textContent="우레탄 폼: 두툼한 발포 단열층을 표현 · 드래그해 회전";
+      }
+
+      // 3) Outer casing: coating, silicone grip, and plastic are visibly different.
+      let outerMat;
+      if(outerName.includes("실리콘")){
+        outerMat=standard(0x167f83,.88,0);
+      }else if(outerName.includes("플라스틱")){
+        outerMat=standard(0x5ba9d1,.24,.08,{transparent:true,opacity:.88});
+      }else{
+        outerMat=standard(0x343e4a,.38,.55);
+      }
+      halfCylinder(1.035,.91,3.03,Math.PI,Math.PI,standard(outerName.includes("실리콘")?0x167f83:outerName.includes("플라스틱")?0x5ba9d1:0x343e4a,outerName.includes("실리콘")?.88:outerName.includes("플라스틱")?.24:.38,outerName.includes("실리콘")?0:outerName.includes("플라스틱")?.08:.55,{transparent:outerName.includes("플라스틱"),opacity:outerName.includes("플라스틱")?.86:1}),.0);
+      if(outerName.includes("실리콘")){
+        for(let y=-1.18;y<=1.20;y+=.17){halfCylinder(1.043,.918,.035,Math.PI,Math.PI,standard(0x0e666b,.95,0),y);}
+        // Soft silicone grip pads on the front-facing side.
+        for(let row=0;row<5;row++)for(let col=0;col<3;col++){
+          const x=-.35+col*.35,y=-.72+row*.36;
+          const pad=new THREE.Mesh(new THREE.SphereGeometry(.055,10,8),standard(0x36a4a4,.92,0));
+          pad.scale.set(1,.65,.35);pad.position.set(x,y,.99);group.add(pad);
+        }
+      }else if(outerName.includes("플라스틱")){
+        ring(1.04,.025,1.48,0x91d8f3,.05);ring(1.04,.025,-1.48,0x91d8f3,.05);
+      }else{
+        ring(1.04,.035,1.48,0x7e8b98,.7);ring(1.04,.035,-1.48,0x202a34,.65);
+      }
+
+      // 4) Lid, drinking opening, threaded-looking rim and base.
+      addMesh(new THREE.CylinderGeometry(1.045,1.045,.25,64),standard(0x242b32,.36,.38),1.58);
+      addMesh(new THREE.CylinderGeometry(.48,.48,.075,48),standard(0x15191e,.3,.2),1.745);
+      ring(.50,.025,1.79,0x707b84,.6);
+      for(let y=1.48;y<=1.56;y+=.025)ring(1.045,.009,y,0x66717b,.45);
+      addMesh(new THREE.CylinderGeometry(.89,.89,.12,64),standard(0x242a31,.3,.45),-1.52);
+
+      // 5) Handle with a thicker connector to the body.
+      const handleMat=standard(outerName.includes("실리콘")?0x167f83:outerName.includes("플라스틱")?0x5ba9d1:0x303a45,outerName.includes("실리콘")?.8:.35,outerName.includes("실리콘")?0:.35);
+      const handle=new THREE.Mesh(new THREE.TorusGeometry(.58,.105,16,48,Math.PI*1.32),handleMat);
+      handle.position.set(-1.27,.0,0);handle.rotation.z=Math.PI/2;group.add(handle);
+      for(const y of [-.28,.28]){
+        const connector=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.22,24),handleMat);
+        connector.rotation.z=Math.PI/2;connector.position.set(-.98,y,0);group.add(connector);
+      }
+
+      // 6) Drink surface and a subtle heat aura.
+      liquid=addMesh(new THREE.CylinderGeometry(.68,.60,2.25,64),new THREE.MeshStandardMaterial({color:0x8d4d20,roughness:.22,side:THREE.DoubleSide}),-.18);
+      const surface=new THREE.Mesh(new THREE.CircleGeometry(.67,48),new THREE.MeshStandardMaterial({color:0xb9793e,roughness:.22,side:THREE.DoubleSide}));
+      surface.rotation.x=-Math.PI/2;surface.position.y=.96;group.add(surface);
+      aura=new THREE.Mesh(new THREE.CylinderGeometry(1.10,1.02,3.18,48,1,true),new THREE.MeshBasicMaterial({color:0xff5522,transparent:true,opacity:.055,side:THREE.DoubleSide}));
       aura.position.y=.02;group.add(aura);
-      status.textContent=config.shouldStart?"시뮬레이션 실행 중 · 드래그해 회전":"준비 완료 · 마우스로 드래그해 텀블러를 회전";
+
       window.addEventListener("resize",resize);
       container.addEventListener("pointerdown",onDown);
       window.addEventListener("pointermove",onMove);
@@ -75,14 +171,14 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       animate();
     }catch(err){console.error(err);fail(err&&err.message?err.message:"WebGL 초기화에 실패했습니다.");}
   }
-  function resize(){if(!renderer||!camera)return;const w=Math.max(container.clientWidth,320);renderer.setSize(w,480);camera.aspect=w/480;camera.updateProjectionMatrix();}
+  function resize(){if(!renderer||!camera)return;const w=Math.max(container.clientWidth,320);renderer.setSize(w,500);camera.aspect=w/500;camera.updateProjectionMatrix();}
   function onDown(e){dragging=true;lastX=e.clientX;lastY=e.clientY;}
   function onMove(e){if(!dragging||!group)return;group.rotation.y+=(e.clientX-lastX)*.01;group.rotation.x=Math.max(-.35,Math.min(.35,group.rotation.x+(e.clientY-lastY)*.005));lastX=e.clientX;lastY=e.clientY;}
   function onUp(){dragging=false;}
   function animate(){
     requestAnimationFrame(animate);
     if(!scene||!renderer)return;
-    if(!dragging&&group)group.rotation.y+=.0018;
+    if(!dragging&&group)group.rotation.y+=.0012;
     if(config.shouldStart){
       elapsed=Math.min(elapsed+16,durationMs);
       const ratio=elapsed/durationMs;
@@ -90,7 +186,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       currentTemp=envTemp+(initialTemp-envTemp)*Math.exp(-Math.log(targetRatio)*ratio);
       if(elapsed>=durationMs)currentTemp=Number(config.tTarget);
       tempVal.textContent=currentTemp.toFixed(1);
-      aura.material.opacity=.04+.10*Math.max(0,(currentTemp-envTemp)/(initialTemp-envTemp||1));
+      aura.material.opacity=.025+.10*Math.max(0,(currentTemp-envTemp)/(initialTemp-envTemp||1));
       if(elapsed>=durationMs){status.textContent="목표 온도 도달";config.shouldStart=false;}
     }
     renderer.render(scene,camera);
