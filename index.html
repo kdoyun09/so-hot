@@ -165,10 +165,16 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       liquid=addMesh(new THREE.CylinderGeometry(.68,.60,2.25,64),new THREE.MeshStandardMaterial({color:0x8d4d20,roughness:.22,side:THREE.DoubleSide}),-.18);
       const surface=new THREE.Mesh(new THREE.CircleGeometry(.67,48),new THREE.MeshStandardMaterial({color:0xb9793e,roughness:.22,side:THREE.DoubleSide}));
       surface.rotation.x=-Math.PI/2;surface.position.y=.96;group.add(surface);
-      // 오로라는 컵 내부를 가리지 않도록 바깥 윤곽선만 은은하게 표시합니다.
-      const auraGeometry=new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.18,.98,3.32,32,1,true),1);
-      aura=new THREE.LineSegments(auraGeometry,new THREE.LineBasicMaterial({color:0x28e878,transparent:true,opacity:.22,depthWrite:false}));
+      // 컵 전체를 감싸는 은은한 오로라: 재료가 보이도록 투명도를 낮춥니다.
+      aura=new THREE.Mesh(new THREE.CylinderGeometry(1.18,.98,3.32,64,1,true),
+        new THREE.MeshBasicMaterial({color:0x28e878,transparent:true,opacity:.095,
+          side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
       aura.position.y=.02;group.add(aura);
+      const auraSoft=new THREE.Mesh(new THREE.CylinderGeometry(1.24,1.04,3.42,64,1,true),
+        new THREE.MeshBasicMaterial({color:0x28e878,transparent:true,opacity:.035,
+          side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+      auraSoft.position.y=.02;group.add(auraSoft);
+      aura.userData.layers=[auraSoft];
 
       window.addEventListener("resize",resize);
       container.addEventListener("pointerdown",onDown);
@@ -211,8 +217,12 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       // 프레임마다 색을 조금씩 보간해 오로라가 갑자기 바뀌지 않도록 합니다.
       aura.material.color.lerp(targetColor,.075);
       const materialBoost=(insulationName.includes("진공")||insulationName.includes("에어로겔"))?1.0:.92;
-      const pulse=1+Math.sin(elapsed*.006)*.04;
-      aura.material.opacity=.22*pulse*materialBoost;
+      const pulse=1+Math.sin(elapsed*.006)*.035;
+      aura.material.opacity=.095*pulse*materialBoost;
+      if(aura.userData.layers){
+        aura.userData.layers[0].material.color.copy(aura.material.color);
+        aura.userData.layers[0].material.opacity=.035*pulse;
+      }
       status.textContent=drinkName+" · "+temperatureLabel+" · 드래그해 회전";
       if(elapsed>=durationMs){
         status.textContent=drinkName+" · "+temperatureLabel+" · 목표 온도 도달";
