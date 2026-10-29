@@ -36,7 +36,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
   let dragging=false,lastX=0,lastY=0,elapsed=0;
   let currentTemp=Number(config.tInit)||90;
   const initialTemp=currentTemp,envTemp=Number(config.tEnv)||20;
-  const durationMs=Math.max(8000,Math.min(45000,(Number(config.timeToTarget)||60)*500));
+  const durationMs=5000; // 시작 후 약 5초 안에 목표 온도에 도달
   const innerName=String(config.innerMaterialName||"");
   const insulationName=String(config.insulationName||"");
   const outerName=String(config.outerMaterialName||"");
