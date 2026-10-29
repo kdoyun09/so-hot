@@ -29,8 +29,24 @@ OUTER_MATERIALS = {
     "BPA-Free 강화 플라스틱 (PP/Tritan - 가벼움 & 스크래치 강함)": {"k_mod": 1.1, "desc": "가볍고 유해물질이 없는 안전한 친환경 플라스틱입니다."}
 }
 
+# 음료별 권장 섭취 온도 범위 (일반적인 기준이며 개인 취향에 따라 달라질 수 있음)
+DRINKS = {
+    "뜨거운 커피": {"kind": "hot", "good_min": 50, "good_max": 65, "default_temp": 85, "desc": "약 50~65°C가 마시기 좋은 범위"},
+    "아이스 커피": {"kind": "cold", "good_min": 4, "good_max": 10, "default_temp": 8, "desc": "약 4~10°C가 마시기 좋은 범위"},
+    "차(녹차·홍차)": {"kind": "hot", "good_min": 50, "good_max": 65, "default_temp": 75, "desc": "약 50~65°C가 마시기 좋은 범위"},
+    "아이스티": {"kind": "cold", "good_min": 4, "good_max": 10, "default_temp": 8, "desc": "약 4~10°C가 마시기 좋은 범위"},
+    "물": {"kind": "neutral", "good_min": 10, "good_max": 40, "default_temp": 20, "desc": "약 10~40°C를 편안하게 마시는 범위로 설정"},
+    "라떼·우유": {"kind": "hot", "good_min": 45, "good_max": 60, "default_temp": 65, "desc": "약 45~60°C가 마시기 좋은 범위"},
+    "스포츠음료": {"kind": "cold", "good_min": 4, "good_max": 12, "default_temp": 8, "desc": "약 4~12°C가 마시기 좋은 범위"}
+}
+
 # 3. 사이드바 UI
 st.sidebar.header("🛠️ 텀블러 커스터마이징")
+st.sidebar.header("🥤 음료 선택")
+drink_name = st.sidebar.selectbox("마실 음료", list(DRINKS.keys()))
+drink_info = DRINKS[drink_name]
+st.sidebar.caption(drink_info["desc"])
+
 inner_mat_key = st.sidebar.selectbox("1. 내부 재질", list(INNER_MATERIALS.keys()))
 inner_desc = INNER_MATERIALS[inner_mat_key]["desc"]
 st.sidebar.caption(inner_desc)
@@ -46,7 +62,7 @@ st.sidebar.caption(outer_desc)
 st.sidebar.markdown("---")
 st.sidebar.header("🌡️ 환경 & 온도 설정")
 t_env = st.sidebar.slider("외부 온도 (°C)", -10, 40, 20)
-t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=90.0, step=1.0)
+t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=float(drink_info["default_temp"]), step=1.0)
 
 # 조건문을 명확한 if - elif - else로 구성하여 SyntaxError 완전 방지
 if t_env < 5:
@@ -91,7 +107,11 @@ config_data = {
     "shouldStart": True if (start_btn and is_valid) else False,
     "innerMaterialName": inner_mat_key,
     "insulationName": insul_mat_key,
-    "outerMaterialName": outer_mat_key
+    "outerMaterialName": outer_mat_key,
+    "drinkName": drink_name,
+    "drinkKind": drink_info["kind"],
+    "goodTempMin": float(drink_info["good_min"]),
+    "goodTempMax": float(drink_info["good_max"])
 }
 
 # 5. UI 출력
@@ -102,7 +122,7 @@ with col1:
     in_name = inner_mat_key.split(' (')[0]
     ins_name = insul_mat_key.split(' (')[0]
     out_name = outer_mat_key.split(' (')[0]
-    st.caption("선택 조합: **" + in_name + "** + **" + ins_name + "** + **" + out_name + "**")
+    st.caption("음료: **" + drink_name + "** · 선택 조합: **" + in_name + "** + **" + ins_name + "** + **" + out_name + "**")
 
     html_path = os.path.join(os.path.dirname(__file__), "index.html")
     if os.path.exists(html_path):
