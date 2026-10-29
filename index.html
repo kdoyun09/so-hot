@@ -161,12 +161,18 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
         connector.rotation.z=Math.PI/2;connector.position.set(-.98,y,0);group.add(connector);
       }
 
-      // 6) Drink surface and a subtle heat aura.
+      // 6) Drink surface and a vivid, layered aurora around the tumbler.
       liquid=addMesh(new THREE.CylinderGeometry(.68,.60,2.25,64),new THREE.MeshStandardMaterial({color:0x8d4d20,roughness:.22,side:THREE.DoubleSide}),-.18);
       const surface=new THREE.Mesh(new THREE.CircleGeometry(.67,48),new THREE.MeshStandardMaterial({color:0xb9793e,roughness:.22,side:THREE.DoubleSide}));
       surface.rotation.x=-Math.PI/2;surface.position.y=.96;group.add(surface);
-      aura=new THREE.Mesh(new THREE.CylinderGeometry(1.10,1.02,3.18,48,1,true),new THREE.MeshBasicMaterial({color:0x22cc66,transparent:true,opacity:.10,side:THREE.DoubleSide}));
+      // 여러 겹의 투명한 발광 레이어로 오로라를 더 선명하게 표현합니다.
+      aura=new THREE.Mesh(new THREE.CylinderGeometry(1.18,.98,3.32,64,1,true),new THREE.MeshBasicMaterial({color:0x28e878,transparent:true,opacity:.30,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
       aura.position.y=.02;group.add(aura);
+      const auraCore=new THREE.Mesh(new THREE.CylinderGeometry(1.10,1.01,3.20,64,1,true),new THREE.MeshBasicMaterial({color:0x28e878,transparent:true,opacity:.22,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+      auraCore.position.y=.02;group.add(auraCore);
+      const auraBase=new THREE.Mesh(new THREE.CylinderGeometry(1.23,1.14,3.38,64,1,true),new THREE.MeshBasicMaterial({color:0x28e878,transparent:true,opacity:.10,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+      auraBase.position.y=.02;group.add(auraBase);
+      aura.userData.layers=[auraCore,auraBase];
 
       window.addEventListener("resize",resize);
       container.addEventListener("pointerdown",onDown);
@@ -207,9 +213,16 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
         temperatureLabel="먹기 좋은 온도예요";
       }
       // 프레임마다 색을 조금씩 보간해 오로라가 갑자기 바뀌지 않도록 합니다.
-      aura.material.color.lerp(targetColor,.055);
-      const materialBoost=(insulationName.includes("진공")||insulationName.includes("에어로겔"))?1.0:.88;
-      aura.material.opacity=.045+.10*Math.min(1,Math.abs(currentTemp-envTemp)/80)*materialBoost;
+      aura.material.color.lerp(targetColor,.075);
+      const materialBoost=(insulationName.includes("진공")||insulationName.includes("에어로겔"))?1.0:.92;
+      const pulse=1+Math.sin(elapsed*.006)*.10;
+      aura.material.opacity=(.30+.08*Math.min(1,Math.abs(currentTemp-envTemp)/80))*pulse*materialBoost;
+      if(aura.userData.layers){
+        aura.userData.layers[0].material.color.copy(aura.material.color);
+        aura.userData.layers[0].material.opacity=.22*pulse;
+        aura.userData.layers[1].material.color.copy(aura.material.color);
+        aura.userData.layers[1].material.opacity=.10*pulse;
+      }
       status.textContent=drinkName+" · "+temperatureLabel+" · 드래그해 회전";
       if(elapsed>=durationMs){
         status.textContent=drinkName+" · "+temperatureLabel+" · 목표 온도 도달";
