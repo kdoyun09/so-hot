@@ -62,7 +62,7 @@ st.sidebar.caption(outer_desc)
 st.sidebar.markdown("---")
 st.sidebar.header("🌡️ 환경 & 온도 설정")
 t_env = st.sidebar.slider("외부 온도 (°C)", -10, 40, 20)
-t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=float(drink_info["default_temp"]), step=1.0)
+t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=float(drink_info["default_temp"]), step=1.0, key="initial_temp_" + drink_name)
 
 # 조건문을 명확한 if - elif - else로 구성하여 SyntaxError 완전 방지
 if t_env < 5:
@@ -72,11 +72,11 @@ elif t_env > 28:
 else:
     rec_temp = 58.0
 
-info_text = "💡 외부 온도(" + str(t_env) + "°C) 기준 추천 목표 온도는 **" + str(rec_temp) + "°C**입니다."
+info_text = "💡 " + drink_name + "의 권장 섭취 온도는 **" + str(drink_info["good_min"]) + "~" + str(drink_info["good_max"]) + "°C**입니다."
 st.sidebar.info(info_text)
 
 drink_target = (drink_info["good_min"] + drink_info["good_max"]) / 2 if drink_info["kind"] != "neutral" else 25.0
-t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=float(drink_target), step=1.0)
+t_target = st.sidebar.number_input("목표 섭취 온도 (°C)", value=float(drink_target), step=1.0, key="target_temp_" + drink_name)
 start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 
 # 4. 물리 연산
