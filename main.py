@@ -91,12 +91,15 @@ is_valid = abs(t_init - t_target) > 0.01
 if not is_valid:
     st.warning("초기 온도와 목표 온도를 다르게 설정하면 온도 변화를 볼 수 있습니다.")
 
-if t_env >= 28:
-    bg_theme = "summer"
-elif t_env <= 10:
+# 외부 온도에 따라 계절 배경을 선택합니다.
+if t_env <= 5:
     bg_theme = "winter"
+elif t_env <= 15:
+    bg_theme = "spring"
+elif t_env <= 25:
+    bg_theme = "autumn"
 else:
-    bg_theme = "normal"
+    bg_theme = "summer"
 
 config_data = {
     "tInit": float(t_init),
