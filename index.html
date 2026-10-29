@@ -27,7 +27,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </div>
 <script>
 (function(){
-  const defaults={tInit:90,tEnv:20,tTarget:58,kTotal:.01,timeToTarget:60,bgTheme:"normal",innerColorHex:"0xc0c8d0",shouldStart:false,innerMaterialName:"SUS304/316L",insulationName:"진공 단열층",outerMaterialName:"파우더 코팅 메탈"};
+  const defaults={tInit:90,tEnv:20,tTarget:58,kTotal:.01,timeToTarget:60,bgTheme:"normal",innerColorHex:"0xc0c8d0",shouldStart:false,innerMaterialName:"SUS304/316L",insulationName:"진공 단열층",outerMaterialName:"파우더 코팅 메탈",drinkName:"뜨거운 커피",drinkKind:"hot",goodTempMin:50,goodTempMax:65};
   const config=Object.assign({},defaults,window.SO_HOT_CONFIG||{});
   const container=document.getElementById("canvas-container");
   const status=document.getElementById("status");
@@ -40,6 +40,10 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
   const innerName=String(config.innerMaterialName||"");
   const insulationName=String(config.insulationName||"");
   const outerName=String(config.outerMaterialName||"");
+  const drinkName=String(config.drinkName||"뜨거운 커피");
+  const drinkKind=String(config.drinkKind||"hot");
+  const goodMin=Number(config.goodTempMin??50);
+  const goodMax=Number(config.goodTempMax??65);
   tempVal.textContent=currentTemp.toFixed(1);
 
   function fail(message){status.textContent="3D 화면 오류: "+message;status.style.color="#ffb4b4";}
@@ -161,7 +165,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       liquid=addMesh(new THREE.CylinderGeometry(.68,.60,2.25,64),new THREE.MeshStandardMaterial({color:0x8d4d20,roughness:.22,side:THREE.DoubleSide}),-.18);
       const surface=new THREE.Mesh(new THREE.CircleGeometry(.67,48),new THREE.MeshStandardMaterial({color:0xb9793e,roughness:.22,side:THREE.DoubleSide}));
       surface.rotation.x=-Math.PI/2;surface.position.y=.96;group.add(surface);
-      aura=new THREE.Mesh(new THREE.CylinderGeometry(1.10,1.02,3.18,48,1,true),new THREE.MeshBasicMaterial({color:0xff5522,transparent:true,opacity:.055,side:THREE.DoubleSide}));
+      aura=new THREE.Mesh(new THREE.CylinderGeometry(1.10,1.02,3.18,48,1,true),new THREE.MeshBasicMaterial({color:0x22cc66,transparent:true,opacity:.10,side:THREE.DoubleSide}));
       aura.position.y=.02;group.add(aura);
 
       window.addEventListener("resize",resize);
@@ -182,16 +186,35 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
     if(config.shouldStart){
       elapsed=Math.min(elapsed+16,durationMs);
       const ratio=elapsed/durationMs;
-      const targetRatio=Math.max((Number(config.tTarget)-envTemp)/(initialTemp-envTemp||1),.001);
-      // 목표 온도 비율은 0~1이므로 log(targetRatio)는 음수입니다.
-      // 지수에 그대로 넣어 온도가 초기값에서 목표값으로 단조롭게 내려가게 합니다.
-      currentTemp=envTemp+(initialTemp-envTemp)*Math.exp(Math.log(targetRatio)*ratio);
-      // 부동소수점 오차나 예외적인 설정으로 목표 범위를 벗어나지 않도록 제한합니다.
-      currentTemp=Math.max(Number(config.tTarget),Math.min(initialTemp,currentTemp));
+      // 텀블러 단열 성능(kTotal)과 재질 조합에 따라 변화 곡선을 조금씩 다르게 표현합니다.
+      const insulationFactor=Math.max(.75,Math.min(1.25,Number(config.kTotal||.01)/.01));
+      const eased=1-Math.pow(1-ratio,1.25/insulationFactor);
+      currentTemp=initialTemp+(Number(config.tTarget)-initialTemp)*eased;
       if(elapsed>=durationMs)currentTemp=Number(config.tTarget);
       tempVal.textContent=currentTemp.toFixed(1);
-      aura.material.opacity=.025+.10*Math.max(0,(currentTemp-envTemp)/(initialTemp-envTemp||1));
-      if(elapsed>=durationMs){status.textContent="목표 온도 도달";config.shouldStart=false;}
+
+      // 음료별 권장 온도 범위에 따라 빨강(너무 뜨거움/미지근함), 초록(적정), 파랑(너무 식음/차가움)으로 부드럽게 전환합니다.
+      let targetColor;
+      let temperatureLabel;
+      if(currentTemp>goodMax){
+        targetColor=new THREE.Color(0xff3328);
+        temperatureLabel=drinkKind==="cold"?"아직 충분히 차갑지 않아요":"너무 뜨거워요";
+      }else if(currentTemp<goodMin){
+        targetColor=new THREE.Color(0x338dff);
+        temperatureLabel=drinkKind==="cold"?"너무 차가워요":"식어서 아쉬워요";
+      }else{
+        targetColor=new THREE.Color(0x28e878);
+        temperatureLabel="먹기 좋은 온도예요";
+      }
+      // 프레임마다 색을 조금씩 보간해 오로라가 갑자기 바뀌지 않도록 합니다.
+      aura.material.color.lerp(targetColor,.055);
+      const materialBoost=(insulationName.includes("진공")||insulationName.includes("에어로겔"))?1.0:.88;
+      aura.material.opacity=.045+.10*Math.min(1,Math.abs(currentTemp-envTemp)/80)*materialBoost;
+      status.textContent=drinkName+" · "+temperatureLabel+" · 드래그해 회전";
+      if(elapsed>=durationMs){
+        status.textContent=drinkName+" · "+temperatureLabel+" · 목표 온도 도달";
+        config.shouldStart=false;
+      }
     }
     renderer.render(scene,camera);
   }
