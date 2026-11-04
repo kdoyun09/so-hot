@@ -53,7 +53,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
   const goodMax=Number(config.goodTempMax??65);
   tempVal.textContent=currentTemp.toFixed(1);
       tempHistory.push({time:elapsed,temp:currentTemp});
-      if(tempHistory.length>180)tempHistory.shift();
+      if(tempHistory.length>600)tempHistory.shift();
       drawGraph();
 
   function fail(message){status.textContent="3D 화면 오류: "+message;status.style.color="#ffb4b4";}
