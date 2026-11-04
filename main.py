@@ -60,6 +60,24 @@ outer_desc = OUTER_MATERIALS[outer_mat_key]["desc"]
 st.sidebar.caption(outer_desc)
 
 st.sidebar.markdown("---")
+st.sidebar.header("🎨 텀블러 외형 디자인")
+BODY_COLORS = {
+    "차콜 블랙": "#343e4a",
+    "실버": "#aeb8c2",
+    "로즈 핑크": "#d889a5",
+    "아이스 블루": "#65b8d5",
+    "포레스트 그린": "#397d68",
+    "크림 화이트": "#e9e4d8"
+}
+body_color_name = st.sidebar.selectbox("외부 색상", list(BODY_COLORS.keys()))
+body_color = BODY_COLORS[body_color_name]
+surface_finish = st.sidebar.selectbox("표면 질감", ["무광", "유광", "메탈릭"])
+lid_style = st.sidebar.selectbox("뚜껑 디자인", ["기본 뚜껑", "빨대 뚜껑", "원터치 뚜껑"])
+show_handle = st.sidebar.checkbox("손잡이 표시", value=True)
+show_straw = st.sidebar.checkbox("빨대 표시", value=False)
+cutaway_view = st.sidebar.checkbox("내부 단면 보기", value=True)
+
+st.sidebar.markdown("---")
 st.sidebar.header("🌡️ 환경 & 온도 설정")
 t_env = st.sidebar.slider("외부 온도 (°C)", -10, 40, 20)
 t_init = st.sidebar.number_input("음료 초기 온도 (°C)", value=float(drink_info["default_temp"]), step=1.0, key="initial_temp_" + drink_name)
@@ -116,7 +134,13 @@ config_data = {
     "drinkName": drink_name,
     "drinkKind": drink_info["kind"],
     "goodTempMin": float(drink_info["good_min"]),
-    "goodTempMax": float(drink_info["good_max"])
+    "goodTempMax": float(drink_info["good_max"]),
+    "bodyColor": body_color,
+    "surfaceFinish": surface_finish,
+    "lidStyle": lid_style,
+    "showHandle": show_handle,
+    "showStraw": show_straw,
+    "cutaway": cutaway_view
 }
 
 # 5. UI 출력
@@ -140,7 +164,7 @@ with col1:
             html_content = html_content.replace("</head>", config_script + "</head>", 1)
         else:
             html_content = config_script + html_content
-        components.html(html_content, height=500)
+        components.html(html_content, height=650)
     else:
         st.error("❌ index.html 파일이 main.py와 동일한 위치에 존재하는지 확인해 주세요.")
 
