@@ -259,9 +259,19 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
         strawTop.position.set(.25,2.68,.12);strawTop.rotation.x=Math.PI/2;group.add(strawTop);
       }
 
-      // 6) Drink surface and a vivid, layered aurora around the tumbler.
-      liquid=addMesh(new THREE.CylinderGeometry(.68,.60,2.25,64),new THREE.MeshStandardMaterial({color:0x8d4d20,roughness:.22,side:THREE.DoubleSide}),-.18);
-      const surface=new THREE.Mesh(new THREE.CircleGeometry(.67,48),new THREE.MeshStandardMaterial({color:0xb9793e,roughness:.22,side:THREE.DoubleSide}));
+      // 6) 음료 종류에 따라 액체와 표면 색상을 구분합니다.
+      const drinkPalette={
+        "뜨거운 커피":{liquid:0x75401f,surface:0x9b6035},
+        "아이스 커피":{liquid:0x5b321f,surface:0x8a5838},
+        "차(녹차·홍차)":{liquid:0x9b7830,surface:0xc5a64f},
+        "아이스티":{liquid:0xb85b20,surface:0xe18a3c},
+        "물":{liquid:0x8fd8ed,surface:0xc8f2ff},
+        "라떼·우유":{liquid:0xd9c49a,surface:0xf0dfbd},
+        "스포츠음료":{liquid:0xe98a32,surface:0xffc35c}
+      };
+      const selectedDrink=drinkPalette[drinkName]||drinkPalette["뜨거운 커피"];
+      liquid=addMesh(new THREE.CylinderGeometry(.68,.60,2.25,64),new THREE.MeshStandardMaterial({color:selectedDrink.liquid,roughness:.22,side:THREE.DoubleSide}),-.18);
+      const surface=new THREE.Mesh(new THREE.CircleGeometry(.67,48),new THREE.MeshStandardMaterial({color:selectedDrink.surface,roughness:.22,side:THREE.DoubleSide}));
       surface.rotation.x=-Math.PI/2;surface.position.y=.96;group.add(surface);
       // 컵 주변에는 오로라를 표시하지 않습니다. 색 효과는 배경에서만 나타납니다.
 
