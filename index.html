@@ -52,9 +52,6 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
   const goodMin=Number(config.goodTempMin??50);
   const goodMax=Number(config.goodTempMax??65);
   tempVal.textContent=currentTemp.toFixed(1);
-      tempHistory.push({time:elapsed,temp:currentTemp});
-      if(tempHistory.length>600)tempHistory.shift();
-      drawGraph();
 
   function fail(message){status.textContent="3D 화면 오류: "+message;status.style.color="#ffb4b4";}
   function standard(color,roughness,metalness,extra){return new THREE.MeshStandardMaterial(Object.assign({color:color,roughness:roughness,metalness:metalness,side:THREE.DoubleSide},extra||{}));}
@@ -335,7 +332,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       if(elapsed>=durationMs)currentTemp=Number(config.tTarget);
       tempVal.textContent=currentTemp.toFixed(1);
       tempHistory.push({time:elapsed,temp:currentTemp});
-      if(tempHistory.length>180)tempHistory.shift();
+      if(tempHistory.length>600)tempHistory.shift();
       drawGraph();
 
       // 음료별 권장 온도 범위에 따라 빨강(너무 뜨거움/미지근함), 초록(적정), 파랑(너무 식음/차가움)으로 부드럽게 전환합니다.
