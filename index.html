@@ -327,7 +327,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       const ratio=elapsed/durationMs;
       // 텀블러 단열 성능(kTotal)과 재질 조합에 따라 변화 곡선을 조금씩 다르게 표현합니다.
       const insulationFactor=Math.max(.75,Math.min(1.25,Number(config.kTotal||.01)/.01));
-      const eased=1-Math.pow(1-ratio,1.25/insulationFactor);
+      const curveStrength=3.0/insulationFactor;
+      const eased=(1-Math.exp(-curveStrength*ratio))/(1-Math.exp(-curveStrength));
       currentTemp=initialTemp+(Number(config.tTarget)-initialTemp)*eased;
       if(elapsed>=durationMs)currentTemp=Number(config.tTarget);
       tempVal.textContent=currentTemp.toFixed(1);
