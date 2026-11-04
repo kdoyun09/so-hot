@@ -302,7 +302,20 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
     graphCtx.setLineDash([4,4]);graphCtx.strokeStyle="#65b8ff";graphCtx.beginPath();graphCtx.moveTo(x0,Y(Number(config.tTarget)));graphCtx.lineTo(x1,Y(Number(config.tTarget)));graphCtx.stroke();graphCtx.setLineDash([]);
     graphCtx.strokeStyle="#ffb45c";graphCtx.lineWidth=2.5;graphCtx.beginPath();
     if(tempHistory.length===0){graphCtx.moveTo(x0,Y(initialTemp));graphCtx.lineTo(x1,Y(initialTemp));}
-    else{tempHistory.forEach((p,j)=>{const x=X(p.time),y=Y(p.temp);if(j===0)graphCtx.moveTo(x,y);else graphCtx.lineTo(x,y);});}
+    else{
+      const pts=tempHistory.map(p=>({x:X(p.time),y:Y(p.temp)}));
+      graphCtx.moveTo(pts[0].x,pts[0].y);
+      if(pts.length===2)graphCtx.lineTo(pts[1].x,pts[1].y);
+      else{
+        for(let j=1;j<pts.length-1;j++){
+          const midX=(pts[j].x+pts[j+1].x)/2;
+          const midY=(pts[j].y+pts[j+1].y)/2;
+          graphCtx.quadraticCurveTo(pts[j].x,pts[j].y,midX,midY);
+        }
+        const last=pts[pts.length-1];
+        graphCtx.lineTo(last.x,last.y);
+      }
+    }
     graphCtx.stroke();
     graphCtx.fillStyle="#eaf2f8";graphCtx.fillText("0초",x0,y1+13);graphCtx.fillText("4.5초",x1-30,y1+13);
   }
