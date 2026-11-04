@@ -272,6 +272,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       container.addEventListener("pointerdown",onDown);
       window.addEventListener("pointermove",onMove);
       window.addEventListener("pointerup",onUp);
+      resize();
+      tempHistory.push({time:0,temp:currentTemp});
+      drawGraph();
       animate();
     }catch(err){console.error(err);fail(err&&err.message?err.message:"WebGL 초기화에 실패했습니다.");}
   }
@@ -331,6 +334,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       currentTemp=initialTemp+(Number(config.tTarget)-initialTemp)*eased;
       if(elapsed>=durationMs)currentTemp=Number(config.tTarget);
       tempVal.textContent=currentTemp.toFixed(1);
+      tempHistory.push({time:elapsed,temp:currentTemp});
+      if(tempHistory.length>180)tempHistory.shift();
+      drawGraph();
 
       // 음료별 권장 온도 범위에 따라 빨강(너무 뜨거움/미지근함), 초록(적정), 파랑(너무 식음/차가움)으로 부드럽게 전환합니다.
       let targetColor;
