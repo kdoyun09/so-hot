@@ -211,9 +211,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       const finishRoughness=config.surfaceFinish==="유광"?.12:config.surfaceFinish==="메탈릭"?.28:.72;
       const finishMetalness=config.surfaceFinish==="메탈릭"?.72:.12;
       const selectedBodyColor=new THREE.Color(config.bodyColor||"#343e4a");
-      const outerOpacity=config.cutaway?1:.34;
-      const outerMaterial=standard(selectedBodyColor,finishRoughness,finishMetalness,{transparent:!config.cutaway,opacity:outerOpacity,depthWrite:!!config.cutaway});
-      halfCylinder(1.035,.91,3.03,config.cutaway?Math.PI:0,config.cutaway?Math.PI:Math.PI*2,outerMaterial,.0);
+      // 단면 보기에서는 외장 뒷면이 내부 구조 위로 겹쳐 보이지 않도록
+      // 외장 원기둥을 숨기고 상단·하단 테두리로 가장 바깥 경계만 표시합니다.
+      // 단면을 끄면 기존처럼 반투명한 전체 외장을 표시합니다.
+      if(!config.cutaway){
+        const outerMaterial=standard(selectedBodyColor,finishRoughness,finishMetalness,{transparent:true,opacity:.34,depthWrite:false});
+        halfCylinder(1.035,.91,3.03,0,Math.PI*2,outerMaterial,.0);
+      }
       if(outerName.includes("실리콘")){
         for(let y=-1.18;y<=1.20;y+=.17){halfCylinder(1.043,.918,.035,Math.PI,Math.PI,standard(0x0e666b,.95,0),y);}
         // Soft silicone grip pads on the front-facing side.
