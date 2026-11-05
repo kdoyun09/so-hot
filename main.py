@@ -100,14 +100,25 @@ start_btn = st.sidebar.button("🚀 시뮬레이션 시작", type="primary")
 # 4. 물리 연산
 k_total = INSULATION_MATERIALS[insul_mat_key]["k_mod"] * INNER_MATERIALS[inner_mat_key]["k_mod"] * OUTER_MATERIALS[outer_mat_key]["k_mod"]
 
-if t_init > t_env and t_target < t_init and t_target > t_env:
-    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
-else:
+# 이 프로그램은 냉각만 시뮬레이션합니다. 목표 온도가 초기 온도보다 높으면 가열 안내만 표시합니다.
+if abs(t_init - t_target) <= 0.01:
+    time_to_target = 0.0
+    is_valid = False
+    st.info("음료가 이미 목표 섭취 온도입니다.")
+elif t_init < t_target:
     time_to_target = 30.0
-# 3D 시뮬레이션은 차가운 음료도 표현하므로 초기/목표 온도가 다르면 실행 가능
-is_valid = abs(t_init - t_target) > 0.01
-if not is_valid:
-    st.warning("초기 온도와 목표 온도를 다르게 설정하면 온도 변화를 볼 수 있습니다.")
+    is_valid = False
+    if t_env > t_target:
+        st.warning("목표 섭취 온도가 초기 온도보다 높습니다. 음료를 데워야 하므로 냉각 시뮬레이션을 실행하지 않습니다.")
+    else:
+        st.warning("목표 섭취 온도가 초기 온도보다 높습니다. 목표 온도에 도달하려면 음료를 데워야 합니다. 이 프로그램에서는 가열 시뮬레이션을 지원하지 않습니다.")
+elif t_target <= t_env:
+    time_to_target = 30.0
+    is_valid = False
+    st.warning("외부 온도가 목표 섭취 온도보다 높거나 같아 자연 냉각만으로는 목표 온도에 도달할 수 없습니다.")
+else:
+    time_to_target = -math.log((t_target - t_env) / (t_init - t_env)) / k_total
+    is_valid = True
 
 # 외부 온도에 따라 계절 배경을 선택합니다.
 if t_env <= 5:
@@ -199,4 +210,9 @@ with col2:
     st.caption("※ 등급은 이 프로그램의 소재 보정값 범위에 따른 상대 비교이며, 실제 제품의 실측 성능 등급은 아닙니다.")
     st.markdown("---")
     st.markdown("### ⏱️ 예상 보온 시간")
-    st.success("🎯 **목표 온도 도달 시간:** 약 **" + f"{time_to_target:.1f}" + " 분**")
+    if is_valid:
+        st.success("🎯 **목표 온도 도달 시간:** 약 **" + f"{time_to_target:.1f}" + " 분**")
+    elif abs(t_init - t_target) <= 0.01:
+        st.info("현재 음료 온도가 목표 섭취 온도입니다.")
+    else:
+        st.caption("현재 설정에서는 냉각 시뮬레이션을 실행할 수 없습니다.")
