@@ -79,15 +79,15 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
           credit:"봄 사진: Jo Hanshin · Wikimedia Commons · CC0"
         },
         summer:{
-          url:"https://commons.wikimedia.org/wiki/Special:FilePath/Bukhansan_Summer_in_Korea.jpg?width=1600",
+          url:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Bukhansan_Summer_in_Korea.jpg",
           credit:"여름 사진: Jo Hanshin · Wikimedia Commons · CC0"
         },
         autumn:{
-          url:"https://commons.wikimedia.org/wiki/Special:FilePath/Autumn_in_Chiak_Mountain.jpg?width=1600",
+          url:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Autumn_in_Chiak_Mountain.jpg",
           credit:"가을 사진: Sohyeon Bak · Wikimedia Commons · CC BY-SA 3.0"
         },
         winter:{
-          url:"https://commons.wikimedia.org/wiki/Special:FilePath/%EB%88%88%EB%82%B4%EB%A6%B0_%EC%84%A4%EC%95%85%EC%82%B0_%ED%92%8D%EA%B2%BD.jpg?width=1600",
+          url:"https://commons.wikimedia.org/wiki/Special:Redirect/file/%EB%88%88%EB%82%B4%EB%A6%B0_%EC%84%A4%EC%95%85%EC%82%B0_%ED%92%8D%EA%B2%BD.jpg",
           credit:"겨울 사진: Sohyeon Bak · Wikimedia Commons · CC BY-SA 3.0"
         }
       };
@@ -100,13 +100,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
         container.appendChild(photoCredit);
       }
       photoCredit.textContent=selectedSeasonPhoto.credit;
-      const seasonBackdropMaterial=new THREE.MeshBasicMaterial({color:0x26313b,depthWrite:false,side:THREE.DoubleSide});
+      const seasonBackdropMaterial=new THREE.MeshBasicMaterial({color:0xffffff,depthWrite:false,side:THREE.DoubleSide});
       const seasonBackdrop=new THREE.Mesh(new THREE.PlaneGeometry(12.5,7.3),seasonBackdropMaterial);
       seasonBackdrop.position.set(0,0,-4.8);seasonBackdrop.renderOrder=-2;scene.add(seasonBackdrop);
       const seasonLoader=new THREE.TextureLoader();
       seasonLoader.setCrossOrigin("anonymous");
       seasonLoader.load(selectedSeasonPhoto.url,(texture)=>{
-        texture.colorSpace=THREE.SRGBColorSpace;
+        texture.encoding=THREE.sRGBEncoding;
         texture.minFilter=THREE.LinearFilter;
         seasonBackdrop.material.map=texture;
         seasonBackdrop.material.color.set(0xffffff);
@@ -164,9 +164,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       if(insulationName.includes("진공")){
         // Vacuum gap: dark, nearly empty annulus with reflective blue inner edges.
         halfCylinder(.965,.835,2.65,0,config.cutaway?Math.PI:Math.PI*2,standard(0x102b3a,.18,.15,{transparent:true,opacity:config.cutaway?.42:.18,depthWrite:false}),0);
-        for(let y=-1.12;y<=1.13;y+=.56){
-          ring(.89,.012,y,0x51c8e8,.65);
-        }
+        for(let y=-1.08;y<=1.08;y+=1.08){ ring(.89,.008,y,0x3b9eb9,.35); }
         status.textContent="진공 단열층: 비어 있는 간격과 금속 반사층을 표시 · 드래그해 회전";
       }else if(insulationName.includes("에어로겔")){
         halfCylinder(.965,.835,2.65,0,config.cutaway?Math.PI:Math.PI*2,standard(0x3f91a9,.9,0,{transparent:true,opacity:config.cutaway?.78:.22}),0);
@@ -197,7 +195,10 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       // 단면 보기에서는 외장 뒷면이 내부 구조 위로 겹쳐 보이지 않도록
       // 외장 원기둥을 숨기고 상단·하단 테두리로 가장 바깥 경계만 표시합니다.
       // 단면을 끄면 기존처럼 반투명한 전체 외장을 표시합니다.
-      if(!config.cutaway){
+      if(config.cutaway){
+        const outerMaterial=standard(selectedBodyColor,finishRoughness,finishMetalness,{transparent:true,opacity:.92,depthWrite:true});
+        halfCylinder(1.035,.91,3.03,Math.PI,Math.PI,outerMaterial,.0);
+      }else{
         const outerMaterial=standard(selectedBodyColor,finishRoughness,finishMetalness,{transparent:true,opacity:.34,depthWrite:false});
         halfCylinder(1.035,.91,3.03,0,Math.PI*2,outerMaterial,.0);
       }
@@ -232,8 +233,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       // 5) Handle with a thicker connector to the body.
       if(config.showHandle!==false){
         const handleMat=standard(selectedBodyColor,finishRoughness,finishMetalness);
-        const handle=new THREE.Mesh(new THREE.TorusGeometry(.58,.105,16,48,Math.PI*1.32),handleMat);
-        handle.position.set(-1.27,.0,0);handle.rotation.z=Math.PI/2;group.add(handle);
+        const handle=new THREE.Mesh(new THREE.TorusGeometry(.58,.105,16,64,Math.PI*1.55),handleMat);
+        handle.position.set(-1.30,.0,.02);handle.rotation.z=Math.PI/2;group.add(handle);
         for(const y of [-.28,.28]){
           const connector=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.22,24),handleMat);
           connector.rotation.z=Math.PI/2;connector.position.set(-.98,y,0);group.add(connector);
