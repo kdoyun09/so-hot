@@ -112,7 +112,18 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
         seasonBackdrop.material.color.set(0xffffff);
         seasonBackdrop.material.needsUpdate=true;
       },undefined,(error)=>{
-        console.warn("계절 사진을 불러오지 못했습니다. 기본 배경을 표시합니다.",error);
+        console.warn("계절 사진을 불러오지 못했습니다. 계절 일러스트 배경을 표시합니다.",error);
+        const cv=document.createElement("canvas");cv.width=1200;cv.height=700;
+        const cx=cv.getContext("2d"),g=cx.createLinearGradient(0,0,0,700);
+        const p={spring:["#b9e5ed","#f5e7ed"],summer:["#67c9f2","#ffe19a"],autumn:["#d98b53","#f3c18a"],winter:["#a8c8df","#f4f8fc"]};
+        const a=p[config.bgTheme]||p.spring;g.addColorStop(0,a[0]);g.addColorStop(1,a[1]);cx.fillStyle=g;cx.fillRect(0,0,1200,700);
+        cx.fillStyle=config.bgTheme==="winter"?"#edf4f8":config.bgTheme==="autumn"?"#81533a":"#527b62";
+        cx.beginPath();cx.moveTo(0,470);cx.lineTo(230,260);cx.lineTo(420,440);cx.lineTo(650,230);cx.lineTo(900,450);cx.lineTo(1080,290);cx.lineTo(1200,420);cx.lineTo(1200,700);cx.lineTo(0,700);cx.fill();
+        if(config.bgTheme==="winter"){cx.fillStyle="#fff";for(let i=0;i<220;i++){cx.beginPath();cx.arc((i*83)%1200,(i*47)%680,2+(i%3),0,Math.PI*2);cx.fill();}}
+        if(config.bgTheme==="autumn"){for(let i=0;i<110;i++){cx.fillStyle=["#c65d2e","#e9a33a","#9b3f25"][i%3];cx.beginPath();cx.ellipse((i*137)%1200,350+(i*71)%300,9,4,i*.4,0,Math.PI*2);cx.fill();}}
+        if(config.bgTheme==="spring"){for(let i=0;i<80;i++){cx.fillStyle="#f6c9dc";cx.beginPath();cx.arc((i*149)%1200,280+(i*53)%280,7,0,Math.PI*2);cx.fill();}}
+        if(config.bgTheme==="summer"){cx.fillStyle="#fff2a6";cx.beginPath();cx.arc(980,120,70,0,Math.PI*2);cx.fill();}
+        const tx=new THREE.CanvasTexture(cv);tx.encoding=THREE.sRGBEncoding;seasonBackdrop.material.map=tx;seasonBackdrop.material.needsUpdate=true;
       });
       // 배경의 오로라 색 번짐은 풍경을 가리지 않도록 아주 은은하게 유지합니다.
       const glowCanvas=document.createElement("canvas");
