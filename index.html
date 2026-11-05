@@ -12,7 +12,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 #canvas-container:active{cursor:grabbing}
 #canvas-container canvas{display:block;width:100%;height:100%}
 #temp-display{position:absolute;top:12px;left:12px;color:#fff;background:rgba(0,0,0,.8);padding:9px 13px;border-radius:8px;font-size:15px;font-weight:bold;border:1px solid #555;z-index:5;pointer-events:none}
-#status{position:absolute;left:12px;bottom:10px;max-width:calc(100% - 24px);color:#eee;background:rgba(0,0,0,.72);padding:7px 10px;border-radius:6px;font-size:12px;z-index:5;pointer-events:none}
+#photo-credit{font-family:Arial,sans-serif}\n#status{position:absolute;left:12px;bottom:10px;max-width:calc(100% - 24px);color:#eee;background:rgba(0,0,0,.72);padding:7px 10px;border-radius:6px;font-size:12px;z-index:5;pointer-events:none}
 #legend{position:absolute;right:12px;top:12px;color:#eee;background:rgba(0,0,0,.76);border:1px solid #555;border-radius:8px;padding:9px 11px;font-size:11px;line-height:1.7;z-index:5;pointer-events:none}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
 </style>
@@ -71,66 +71,49 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
       if(config.bgTheme==="autumn"){bg=0x291b17;gridColor=0x8b5940;seasonGlow=0xff8659;}
       if(config.bgTheme==="winter"){bg=0x0a1622;gridColor=0x3377aa;seasonGlow=0x68caff;}
       scene.background=new THREE.Color(bg);
-      // 계절별 풍경을 직접 그린 배경 일러스트를 컵 뒤에 배치합니다.
-      const seasonCanvas=document.createElement("canvas");
-      seasonCanvas.width=1200;seasonCanvas.height=700;
-      const ctx=seasonCanvas.getContext("2d");
-      const sky=ctx.createLinearGradient(0,0,0,700);
-      const skyColors={
-        spring:["#8ed9f2","#e8f8f5","#b9e8c0"],
-        summer:["#38bdf8","#b9edff","#f8e9a4"],
-        autumn:["#7c9bb7","#f4c28b","#d98a58"],
-        winter:["#557d9d","#c5e3f4","#edf7ff"]
-      }[config.bgTheme]||["#8ed9f2","#e8f8f5","#b9e8c0"];
-      sky.addColorStop(0,skyColors[0]);sky.addColorStop(.68,skyColors[1]);sky.addColorStop(1,skyColors[2]);
-      ctx.fillStyle=sky;ctx.fillRect(0,0,1200,700);
-      // 멀리 있는 언덕과 지면
-      function hill(y,color,amp,phase){
-        ctx.beginPath();ctx.moveTo(0,700);ctx.lineTo(0,y);
-        for(let x=0;x<=1200;x+=20)ctx.lineTo(x,y+Math.sin(x/105+phase)*amp+Math.sin(x/53+phase)*amp*.22);
-        ctx.lineTo(1200,700);ctx.closePath();ctx.fillStyle=color;ctx.fill();
+      // 한국의 실제 사계절 풍경 사진을 배경 텍스처로 사용합니다.
+      // Wikimedia Commons의 공개 라이선스 사진이며, 화면에 사진 출처를 함께 표시합니다.
+      const seasonPhotos={
+        spring:{
+          url:"https://commons.wikimedia.org/wiki/Special:FilePath/Mangyeongdae_Terrace_of_Bukhansan_in_Spring_in_Korea.jpg?width=1600",
+          credit:"봄 사진: Jo Hanshin · Wikimedia Commons · CC0"
+        },
+        summer:{
+          url:"https://commons.wikimedia.org/wiki/Special:FilePath/Bukhansan_Summer_in_Korea.jpg?width=1600",
+          credit:"여름 사진: Jo Hanshin · Wikimedia Commons · CC0"
+        },
+        autumn:{
+          url:"https://commons.wikimedia.org/wiki/Special:FilePath/Autumn_in_Chiak_Mountain.jpg?width=1600",
+          credit:"가을 사진: Sohyeon Bak · Wikimedia Commons · CC BY-SA 3.0"
+        },
+        winter:{
+          url:"https://commons.wikimedia.org/wiki/Special:FilePath/%EB%88%88%EB%82%B4%EB%A6%B0_%EC%84%A4%EC%95%85%EC%82%B0_%ED%92%8D%EA%B2%BD.jpg?width=1600",
+          credit:"겨울 사진: Sohyeon Bak · Wikimedia Commons · CC BY-SA 3.0"
+        }
+      };
+      const selectedSeasonPhoto=seasonPhotos[config.bgTheme]||seasonPhotos.spring;
+      let photoCredit=document.getElementById("photo-credit");
+      if(!photoCredit){
+        photoCredit=document.createElement("div");
+        photoCredit.id="photo-credit";
+        photoCredit.style.cssText="position:absolute;right:10px;bottom:10px;max-width:55%;padding:5px 7px;border-radius:5px;background:rgba(0,0,0,.62);color:#e8edf2;font:10px Arial,sans-serif;text-align:right;z-index:4;pointer-events:none";
+        container.appendChild(photoCredit);
       }
-      if(config.bgTheme==="winter"){
-        hill(475,"#d9edf8",35,1);hill(545,"#f4fbff",24,2);
-        // 눈 덮인 소나무
-        [[95,445,1.0],[210,485,.72],[1010,455,.95],[1110,490,.72]].forEach(([x,y,scale])=>{
-          ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
-          ctx.fillStyle="#456b7d";ctx.beginPath();ctx.moveTo(0,-125);ctx.lineTo(-48,-42);ctx.lineTo(-20,-42);ctx.lineTo(-62,5);ctx.lineTo(62,5);ctx.lineTo(20,-42);ctx.lineTo(48,-42);ctx.closePath();ctx.fill();
-          ctx.strokeStyle="#f8fdff";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(-35,-55);ctx.lineTo(0,-90);ctx.lineTo(35,-55);ctx.moveTo(-44,-8);ctx.lineTo(0,-35);ctx.lineTo(44,-8);ctx.stroke();ctx.restore();
-        });
-        ctx.fillStyle="rgba(255,255,255,.9)";
-        for(let i=0;i<90;i++){const x=(i*137)%1200,y=(i*83)%600;ctx.beginPath();ctx.arc(x,y,2+(i%3),0,Math.PI*2);ctx.fill();}
-      }else if(config.bgTheme==="spring"){
-        hill(500,"#8dce9b",34,1);hill(555,"#5eaf78",25,2);
-        // 벚꽃 나무와 분홍 꽃송이
-        [[100,500,1.0],[1080,520,.95]].forEach(([x,y,scale])=>{
-          ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
-          ctx.strokeStyle="#765344";ctx.lineWidth=17;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-115);ctx.lineTo(-38,-155);ctx.moveTo(0,-100);ctx.lineTo(42,-145);ctx.moveTo(-20,-135);ctx.lineTo(-58,-170);ctx.stroke();
-          for(let j=0;j<48;j++){const a=j*2.399,r=18+((j*17)%65),fx=Math.cos(a)*r,fy=-145+Math.sin(a)*r*.65;ctx.fillStyle=["#ffc4dc","#ffdfeb","#f7a9cb"][j%3];ctx.beginPath();ctx.arc(fx,fy,7+(j%3),0,Math.PI*2);ctx.fill();}
-          ctx.restore();
-        });
-        for(let i=0;i<18;i++){ctx.save();ctx.translate((i*71+35)%1200,(i*47+70)%470);ctx.rotate(i*.7);ctx.fillStyle="#f6b6d0";ctx.beginPath();ctx.ellipse(0,0,5,10,0,0,Math.PI*2);ctx.fill();ctx.restore();}
-      }else if(config.bgTheme==="summer"){
-        hill(500,"#78bd58",34,1);hill(565,"#3f9b50",25,2);
-        // 강한 햇살과 햇빛 줄기
-        ctx.save();ctx.translate(965,145);
-        ctx.strokeStyle="rgba(255,235,135,.85)";ctx.lineWidth=8;
-        for(let a=0;a<Math.PI*2;a+=Math.PI/8){ctx.beginPath();ctx.moveTo(Math.cos(a)*78,Math.sin(a)*78);ctx.lineTo(Math.cos(a)*112,Math.sin(a)*112);ctx.stroke();}
-        const sun=ctx.createRadialGradient(0,0,8,0,0,76);sun.addColorStop(0,"#fffbd0");sun.addColorStop(.7,"#ffd34f");sun.addColorStop(1,"#ff9e36");
-        ctx.fillStyle=sun;ctx.beginPath();ctx.arc(0,0,75,0,Math.PI*2);ctx.fill();ctx.restore();
-        // 초록 나무
-        [[105,500],[1090,520]].forEach(([x,y])=>{ctx.fillStyle="#79563a";ctx.fillRect(x-10,y-115,20,120);ctx.fillStyle="#2f8b4a";ctx.beginPath();ctx.arc(x,y-135,58,0,Math.PI*2);ctx.arc(x-38,y-105,38,0,Math.PI*2);ctx.arc(x+38,y-105,38,0,Math.PI*2);ctx.fill();});
-      }else{
-        hill(500,"#c98254",34,1);hill(565,"#a95f3d",25,2);
-        // 가을 나무와 떨어지는 단풍잎
-        [[100,505],[1090,525]].forEach(([x,y])=>{ctx.fillStyle="#76503a";ctx.fillRect(x-9,y-120,18,125);for(let j=0;j<22;j++){const a=j*2.4,r=18+(j*13)%58;ctx.fillStyle=["#e85d2a","#f39a32","#c84227","#f5c04d"][j%4];ctx.beginPath();ctx.ellipse(x+Math.cos(a)*r,y-140+Math.sin(a)*r*.65,13,8,a,0,Math.PI*2);ctx.fill();}});
-        for(let i=0;i<22;i++){const x=(i*83+40)%1200,y=(i*59+70)%450;ctx.save();ctx.translate(x,y);ctx.rotate(i*1.1);ctx.fillStyle=["#e85d2a","#f39a32","#c84227","#f5c04d"][i%4];ctx.beginPath();ctx.ellipse(0,0,13,7,.5,0,Math.PI*2);ctx.fill();ctx.restore();}
-      }
-      const seasonTexture=new THREE.CanvasTexture(seasonCanvas);
-      seasonTexture.needsUpdate=true;
-      const seasonBackdrop=new THREE.Mesh(new THREE.PlaneGeometry(12.5,7.3),
-        new THREE.MeshBasicMaterial({map:seasonTexture,depthWrite:false,side:THREE.DoubleSide}));
+      photoCredit.textContent=selectedSeasonPhoto.credit;
+      const seasonBackdropMaterial=new THREE.MeshBasicMaterial({color:0x26313b,depthWrite:false,side:THREE.DoubleSide});
+      const seasonBackdrop=new THREE.Mesh(new THREE.PlaneGeometry(12.5,7.3),seasonBackdropMaterial);
       seasonBackdrop.position.set(0,0,-4.8);seasonBackdrop.renderOrder=-2;scene.add(seasonBackdrop);
+      const seasonLoader=new THREE.TextureLoader();
+      seasonLoader.setCrossOrigin("anonymous");
+      seasonLoader.load(selectedSeasonPhoto.url,(texture)=>{
+        texture.colorSpace=THREE.SRGBColorSpace;
+        texture.minFilter=THREE.LinearFilter;
+        seasonBackdrop.material.map=texture;
+        seasonBackdrop.material.color.set(0xffffff);
+        seasonBackdrop.material.needsUpdate=true;
+      },undefined,(error)=>{
+        console.warn("계절 사진을 불러오지 못했습니다. 기본 배경을 표시합니다.",error);
+      });
       // 배경의 오로라 색 번짐은 풍경을 가리지 않도록 아주 은은하게 유지합니다.
       const glowCanvas=document.createElement("canvas");
       glowCanvas.width=512;glowCanvas.height=512;
