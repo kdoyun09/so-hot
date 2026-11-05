@@ -175,8 +175,28 @@ with col2:
     st.markdown("- **단열:** " + insul_desc)
     st.markdown("- **외부:** " + outer_desc)
     st.markdown("---")
-    st.markdown("### 🧪 계산된 총 열전달 계수 (k)")
+    st.markdown("### 🧪 소재별 열전달 보정 계수")
     st.code("k_total = " + f"{k_total:.5f}")
+
+    # k_total은 실제 물리 단위의 총괄 열전달계수가 아닌, 이 시뮬레이터 내부의 비교용 보정 지표입니다.
+    if k_total <= 0.012:
+        performance = "매우 우수"
+        performance_detail = "열이 비교적 천천히 이동하도록 설정된 조합입니다. 음료의 온도를 오래 유지하는 데 유리합니다."
+        st.success("🏆 **보온·보냉 성능: " + performance + "**")
+    elif k_total <= 0.022:
+        performance = "우수"
+        performance_detail = "온도 유지 성능이 좋은 조합입니다."
+        st.success("🟢 **보온·보냉 성능: " + performance + "**")
+    elif k_total <= 0.035:
+        performance = "보통"
+        performance_detail = "온도 유지 성능이 보통 수준인 조합입니다."
+        st.info("🔵 **보온·보냉 성능: " + performance + "**")
+    else:
+        performance = "낮음"
+        performance_detail = "다른 조합보다 열이 빠르게 이동하도록 설정되어 있어 온도 유지 시간이 짧을 수 있습니다."
+        st.warning("⚠️ **보온·보냉 성능: " + performance + "**")
+    st.caption(performance_detail)
+    st.caption("※ 등급은 이 프로그램의 소재 보정값 범위에 따른 상대 비교이며, 실제 제품의 실측 성능 등급은 아닙니다.")
     st.markdown("---")
     st.markdown("### ⏱️ 예상 보온 시간")
     st.success("🎯 **목표 온도 도달 시간:** 약 **" + f"{time_to_target:.1f}" + " 분**")
