@@ -210,7 +210,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
         const outerMaterial=standard(selectedBodyColor,finishRoughness,finishMetalness,{transparent:true,opacity:.92,depthWrite:true});
         halfCylinder(1.035,.91,3.03,Math.PI,Math.PI,outerMaterial,.0);
       }else{
-        const outerMaterial=standard(selectedBodyColor,finishRoughness,finishMetalness,{transparent:true,opacity:.34,depthWrite:false});
+        // 단면 보기를 끄면 내부 구조가 비치지 않도록 외장 케이스를 불투명하게 표시합니다.
+        // 선택한 외부 색상(예: 로즈 핑크)이 텀블러 전체 표면을 채우도록 설정합니다.
+        const outerMaterial=standard(selectedBodyColor,finishRoughness,finishMetalness,{transparent:false,opacity:1,depthWrite:true});
         halfCylinder(1.035,.91,3.03,0,Math.PI*2,outerMaterial,.0);
       }
       if(outerName.includes("실리콘")){
